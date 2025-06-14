@@ -10,6 +10,7 @@ RUN apk add --no-cache dos2unix git
 FROM base AS builder
 WORKDIR /app
 
+COPY .git .git
 COPY gradlew gradlew
 COPY gradle gradle
 COPY build.gradle.kts build.gradle.kts

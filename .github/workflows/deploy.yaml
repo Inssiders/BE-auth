@@ -1,6 +1,7 @@
 name: Deploy to EC2 with Docker Compose
 
 on:
+  workflow_dispatch:
   workflow_run:
     workflows: ["Publish Docker image on Semver tag push"]
     types:

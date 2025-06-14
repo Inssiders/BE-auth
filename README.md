@@ -1,8 +1,8 @@
 # initialization
 
 ```sh
-git clone https://github.com/Inssiders/BE-main.git
-cd BE-main
+git clone https://github.com/Inssiders/BE-auth.git
+cd BE-auth
 cp .env.example .env
 
 # https://sdkman.io/install/
@@ -28,7 +28,7 @@ gradlew test -Dspring.profiles.active=dev -t
 gradlew bootRun -Dspring.profiles.active=dev
 # + IDE extension으로도 실행 가능
 
-docker exec -it be-main-postgres-1 psql -U user -d dev
+docker exec -it be-auth-postgres-1 psql -U user -d dev
 SELECT * FROM accounts;
 SELECT * FROM user_profiles;
 ```

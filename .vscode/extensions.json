@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "vscjava.vscode-spring-boot-dashboard",
+    "vscjava.vscode-gradle"
+  ],
+  "unwantedRecommendations": []
+}

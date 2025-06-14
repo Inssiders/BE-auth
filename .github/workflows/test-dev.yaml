@@ -1,0 +1,66 @@
+#
+# DEV 프로필의 통합 테스트를 수행합니다.
+# 2인 이상의 협업 시, 서로의 코드가 멱등성을 위배하지는 않는지 점검합니다.
+#
+name: Integration Test (profile:dev)
+on:
+  pull_request:
+    branches: [ develop ]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SEGMENT_DOWNLOAD_TIMEOUT_MINS: "1"
+    steps:
+      - name: Record workflow start time
+        id: workflow-start
+        run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - uses: actions/checkout@v4.2.2
+
+      - uses: actions/setup-java@v4.7.1
+        with:
+          distribution: "temurin"
+          java-version-file: .java-version
+          cache: "gradle"
+
+      - uses: docker/setup-compose-action@v1.2.0
+        with:
+          version: latest
+
+      - name: Set up .env (profile=dev)
+        run: cp .env.example .env
+
+      - name: Start Docker Compose (profile=dev)
+        run: docker compose --profile dev up -d
+
+      - name: Run Gradle tests (profile=dev)
+        id: gradle-test
+        run: |
+          TEST_START=$(date +%s)
+          ./gradlew test -Dspring.profiles.active=dev
+          TEST_END=$(date +%s)
+          TEST_DURATION=$((TEST_END - TEST_START))
+          echo "test_duration=${TEST_DURATION}" >> $GITHUB_OUTPUT
+
+      - name: Upload Test Report on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: test-report
+          path: build/reports/tests/test
+          retention-days: 1
+          overwrite: true
+
+      - name: Docker clean-up (profile=dev)
+        run: docker compose --profile dev down
+
+      - name: Show Test/Workflow Duration Ratio on Success
+        if: success()
+        run: |
+          WORKFLOW_START=${{ steps.workflow-start.outputs.start_time }}
+          WORKFLOW_END=$(date +%s)
+          WORKFLOW_DURATION=$((WORKFLOW_END - WORKFLOW_START))
+          TEST_DURATION=${{ steps.gradle-test.outputs.test_duration }}
+          RATIO=$(awk "BEGIN {printf \"%.2f\", $TEST_DURATION/$WORKFLOW_DURATION}")
+          echo "${TEST_DURATION} / ${WORKFLOW_DURATION} seconds ($RATIO)"

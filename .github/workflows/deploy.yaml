@@ -1,0 +1,69 @@
+name: Deploy to EC2 with Docker Compose
+
+on:
+  workflow_run:
+    workflows: [ "Publish Docker image on Semver tag push" ]
+    types:
+      - completed
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.1.0
+        with:
+          aws-region: ap-northeast-2
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          retry-max-attempts: 3
+
+      - name: Open SSH port for GitHub Actions
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.AWS_SECURITY_GROUP_ID }} \
+            --protocol tcp --port 22 --cidr 0.0.0.0/0 || true
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.AWS_INSTANCE_HOST }}
+          port: ${{ secrets.AWS_SSH_PORT }}
+          username: ubuntu
+          key: ${{ secrets.AWS_SSH_PK }}
+          script: |
+            echo "🚀 EC2에 배포 시작"
+            
+            # 1. 레포지토리 pull
+            cd BE-main
+            git pull origin main
+            
+            RAW_TAG="${{ github.event.workflow_run.head_branch }}"
+            IMAGE_TAG="${RAW_TAG#v}"
+            echo "📦 전달받은 Git 태그: $RAW_TAG → 이미지 태그: $IMAGE_TAG"
+            
+            # 2. .env.prod 존재하지 않으면 에러
+            if [ ! -f .env.prod ]; then
+              echo "❌ .env.prod 파일이 없습니다. 수동으로 업로드해주세요."
+              exit 1
+            fi
+            
+            echo "📝 .env.prod IMAGE_TAG 업데이트"
+            # 기존 IMAGE_TAG 라인이 있으면 덮어쓰기, 없으면 추가
+            grep -q '^IMAGE_TAG=' .env.prod && \
+              sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$IMAGE_TAG/" .env.prod || \
+              echo "IMAGE_TAG=$IMAGE_TAG" >> .env.prod
+
+            # 3. 배포 스크립트 실행
+            chmod +x scripts/run-docker-prod.sh
+            ./scripts/run-docker-prod.sh
+
+      - name: Close SSH port after deploy
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ secrets.AWS_SECURITY_GROUP_ID }} \
+            --protocol tcp --port 22 --cidr 0.0.0.0/0 || true

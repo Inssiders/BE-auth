@@ -27,9 +27,6 @@ RUN ./gradlew bootJar -x test --no-daemon
 FROM bellsoft/liberica-openjre-alpine:21 AS runner
 WORKDIR /app
 
-# wget 설치
-RUN apk add --no-cache wget
-
 COPY --from=builder /app/build/libs/*.jar app.jar
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \

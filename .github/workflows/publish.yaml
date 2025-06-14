@@ -24,7 +24,9 @@ jobs:
           
       - name: Create git tag for workflow_dispatch
         if: github.event_name == 'workflow_dispatch'
-        run: git tag ${{ github.event.inputs.tag }}
+        run: |
+          git tag -d ${{ github.event.inputs.tag }} 2>/dev/null || true
+          git tag ${{ github.event.inputs.tag }}
 
       - name: Run spotlessCheck
         run: ./gradlew spotlessCheck

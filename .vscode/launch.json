@@ -2,11 +2,11 @@
   "configurations": [
     {
       "type": "java",
-      "name": "Spring Boot-MainWebApplication<api-BE-main>",
+      "name": "Spring Boot-MainWebApplication<api-BE-auth>",
       "request": "launch",
       "cwd": "${workspaceFolder}",
       "mainClass": "com.inssider.api.MainWebApplication",
-      "projectName": "api-BE-main",
+      "projectName": "api-BE-auth",
       "args": "--spring.profiles.active=dev",
       "envFile": "${workspaceFolder}/.env"
     }

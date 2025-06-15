@@ -1,8 +1,16 @@
 name: Deploy to EC2 with Docker Compose
 
 on:
+  workflow_dispatch:
+    inputs:
+      docker_tag:
+        description: "Docker tag to deploy (ex 1.0.0)"
+        required: false
+        default: "latest"
   workflow_run:
-    workflows: [ "Publish Docker image on Semver tag push" ]
+    workflows: ["Publish Docker image on Semver tag push"]
+    branches: 
+      - main
     types:
       - completed
 
@@ -13,7 +21,28 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     steps:
+      - name: Download workflow artifacts
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: docker-metadata
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+        continue-on-error: true
+
+      - name: Read Docker tag
+        id: docker_tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ github.event.inputs.docker_tag }}" >> $GITHUB_OUTPUT
+          elif [[ -f docker_tag.txt ]]; then
+            echo "tag=$(cat docker_tag.txt)" >> $GITHUB_OUTPUT
+          else
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4.1.0
         with:
@@ -25,7 +54,7 @@ jobs:
       - name: Open SSH port for GitHub Actions
         run: |
           aws ec2 authorize-security-group-ingress \
-            --group-id ${{ secrets.AWS_SECURITY_GROUP_ID }} \
+            --group-id ${{ vars.AWS_SECURITY_GROUP_ID }} \
             --protocol tcp --port 22 --cidr 0.0.0.0/0 || true
 
       - name: Deploy to EC2 via SSH
@@ -33,37 +62,15 @@ jobs:
         with:
           host: ${{ secrets.AWS_INSTANCE_HOST }}
           port: ${{ secrets.AWS_SSH_PORT }}
-          username: ubuntu
+          username: oomia
           key: ${{ secrets.AWS_SSH_PK }}
           script: |
-            echo "🚀 EC2에 배포 시작"
-            
-            # 1. 레포지토리 pull
-            cd BE-main
-            git pull origin main
-            
-            RAW_TAG="${{ github.event.workflow_run.head_branch }}"
-            IMAGE_TAG="${RAW_TAG#v}"
-            echo "📦 전달받은 Git 태그: $RAW_TAG → 이미지 태그: $IMAGE_TAG"
-            
-            # 2. .env.prod 존재하지 않으면 에러
-            if [ ! -f .env.prod ]; then
-              echo "❌ .env.prod 파일이 없습니다. 수동으로 업로드해주세요."
-              exit 1
-            fi
-            
-            echo "📝 .env.prod IMAGE_TAG 업데이트"
-            # 기존 IMAGE_TAG 라인이 있으면 덮어쓰기, 없으면 추가
-            grep -q '^IMAGE_TAG=' .env.prod && \
-              sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$IMAGE_TAG/" .env.prod || \
-              echo "IMAGE_TAG=$IMAGE_TAG" >> .env.prod
-
-            # 3. 배포 스크립트 실행
-            chmod +x scripts/run-docker-prod.sh
-            ./scripts/run-docker-prod.sh
+            cd BE-auth
+            echo "Deploying Docker tag: ${{ steps.docker_tag.outputs.tag }}"
+            SPRING_PROFILES_ACTIVE=prod DOCKER_TAG=${{ steps.docker_tag.outputs.tag }} docker compose --profile prod up -d --pull always
 
       - name: Close SSH port after deploy
         run: |
           aws ec2 revoke-security-group-ingress \
-            --group-id ${{ secrets.AWS_SECURITY_GROUP_ID }} \
+            --group-id ${{ vars.AWS_SECURITY_GROUP_ID }} \
             --protocol tcp --port 22 --cidr 0.0.0.0/0 || true

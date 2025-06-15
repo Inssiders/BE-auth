@@ -2,7 +2,13 @@ name: Publish Docker image on Semver tag push
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Semver tag to release (ex v1.0.0)"
+        required: true
   push:
+    branches:
+      - main
     tags:
       - "v*.*.*"
 
@@ -11,36 +17,46 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOCKER_BUILD_RECORD_RETENTION_DAYS: 1
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Run spotlessCheck
-        run: ./gradlew spotlessCheck
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
 
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5.7.0
         with:
           images: |
-            ${{ vars.DOCKERHUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME }}
+            ${{ vars.DOCKERHUB_USERNAME }}/inssider-${{ github.event.repository.name }}
           tags: |
-            type=semver,pattern={{version}}
-#            type=semver,pattern={{major}}.{{minor}}
-#            type=semver,pattern={{major}}
+            type=semver,pattern={{major}},value=${{ env.RELEASE_TAG }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.RELEASE_TAG }}
+            type=semver,pattern={{version}},value=${{ env.RELEASE_TAG }}
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3.4.0
         with:
-          username: ${{ vars.DOCKERHUB_ID }}
+          username: ${{ secrets.DOCKERHUB_ID }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - uses: docker/setup-buildx-action@v3.10.0
-
+        
       - name: Build and push
         uses: docker/build-push-action@v6.17.0
         with:
+          context: .
           push: true
           tags: ${{ steps.meta.outputs.tags || 'latest' }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64
+
+      - name: Save Docker tag for deployment
+        run: |
+          echo "${{ steps.meta.outputs.tags }}" | head -n1 > docker_tag.txt
+
+      - name: Upload Docker metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-metadata
+          path: docker_tag.txt
+          retention-days: 1

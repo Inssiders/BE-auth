@@ -26,7 +26,7 @@ class WebtemplateApplicationTests {
     LocalDate today = LocalDate.now(ZoneOffset.UTC);
 
     assertEquals(today, buildDate);
-    assertEquals("0.0.10-SNAPSHOT", buildProperties.getVersion());
+    assertEquals("0.0.1-SNAPSHOT", buildProperties.getVersion());
     assertEquals("api", buildProperties.getArtifact());
     assertEquals("api", buildProperties.getName());
     assertEquals("com.inssider", buildProperties.getGroup());

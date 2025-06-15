@@ -10,7 +10,13 @@ group = "com.inssider"
 
 // https://github.com/palantir/gradle-git-version
 val versionDetails: groovy.lang.Closure<com.palantir.gradle.gitversion.VersionDetails> by extra
-version = versionDetails().lastTag
+val gitVersion = versionDetails()
+version =
+    when {
+        gitVersion.isCleanTag -> gitVersion.lastTag
+        gitVersion.lastTag.isNotEmpty() -> "${gitVersion.lastTag}-${gitVersion.commitDistance}-${gitVersion.gitHash}"
+        else -> gitVersion.gitHash
+    }
 
 springBoot {
     buildInfo()

@@ -10,8 +10,10 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -49,6 +51,11 @@ class SwaggerConfig {
                 .title("Inssider Auth API")
                 .version(version)
                 .description("Inssider Auth API Documentation"))
+        .servers(
+            List.of(
+                new Server().url("http://52.78.186.60").description("Production Server"),
+                new Server().url("https://inssider.oomia.click").description("Auth Server"),
+                new Server().url("http://localhost:8080").description("Development Server")))
         .components(components());
   }
 

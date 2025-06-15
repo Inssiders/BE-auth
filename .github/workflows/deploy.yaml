@@ -9,8 +9,6 @@ on:
         default: "latest"
   workflow_run:
     workflows: ["Publish Docker image on Semver tag push"]
-    branches: 
-      - main
     types:
       - completed
 
@@ -21,7 +19,9 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: |
+      github.event_name == 'workflow_dispatch' || 
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     steps:
       - name: Download workflow artifacts
         if: github.event_name == 'workflow_run'

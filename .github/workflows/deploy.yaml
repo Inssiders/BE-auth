@@ -2,8 +2,15 @@ name: Deploy to EC2 with Docker Compose
 
 on:
   workflow_dispatch:
+    inputs:
+      docker_tag:
+        description: "Docker tag to deploy (ex 1.0.0)"
+        required: false
+        default: "latest"
   workflow_run:
     workflows: ["Publish Docker image on Semver tag push"]
+    branches: 
+      - main
     types:
       - completed
 
@@ -14,7 +21,28 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     steps:
+      - name: Download workflow artifacts
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: docker-metadata
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+        continue-on-error: true
+
+      - name: Read Docker tag
+        id: docker_tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ github.event.inputs.docker_tag }}" >> $GITHUB_OUTPUT
+          elif [[ -f docker_tag.txt ]]; then
+            echo "tag=$(cat docker_tag.txt)" >> $GITHUB_OUTPUT
+          else
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4.1.0
         with:
@@ -38,7 +66,8 @@ jobs:
           key: ${{ secrets.AWS_SSH_PK }}
           script: |
             cd BE-auth
-            SPRING_PROFILES_ACTIVE=prod docker compose --profile prod up -d --pull always
+            echo "Deploying Docker tag: ${{ steps.docker_tag.outputs.tag }}"
+            SPRING_PROFILES_ACTIVE=prod DOCKER_TAG=${{ steps.docker_tag.outputs.tag }} docker compose --profile prod up -d --pull always
 
       - name: Close SSH port after deploy
         run: |

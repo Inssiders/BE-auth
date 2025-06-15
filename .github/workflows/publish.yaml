@@ -4,9 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Semver tag to release"
+        description: "Semver tag to release (ex v1.0.0)"
         required: true
   push:
+    branches:
+      - main
     tags:
       - "v*.*.*"
 
@@ -26,7 +28,7 @@ jobs:
         uses: docker/metadata-action@v5.7.0
         with:
           images: |
-            ${{ vars.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}
+            ${{ vars.DOCKERHUB_USERNAME }}/inssider-${{ github.event.repository.name }}
           tags: |
             type=semver,pattern={{major}},value=${{ env.RELEASE_TAG }}
             type=semver,pattern={{major}}.{{minor}},value=${{ env.RELEASE_TAG }}
@@ -47,3 +49,14 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags || 'latest' }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Save Docker tag for deployment
+        run: |
+          echo "${{ steps.meta.outputs.tags }}" | head -n1 > docker_tag.txt
+
+      - name: Upload Docker metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-metadata
+          path: docker_tag.txt
+          retention-days: 1

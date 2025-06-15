@@ -73,8 +73,8 @@ services:
   app:
     <<: *app-template
     profiles: [prod]
-    image: oomia/inssider-spring-template:0.0.1
-    restart: "on-failure:1"
+    image: oomia/inssider-be-auth:${DOCKER_TAG:-latest}
+    restart: "on-failure"
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       POSTGRES_HOST: postgres

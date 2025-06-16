@@ -10,6 +10,6 @@
     "vmArgs": ["-Dspring.profiles.active=dev"]
   },
   "java.format.enabled": false,
-  "explorer.excludeGitIgnore": true,
+  "explorer.excludeGitIgnore": false,
   "java.debug.settings.onBuildFailureProceed": true
 }

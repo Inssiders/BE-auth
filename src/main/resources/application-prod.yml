@@ -1,27 +1,17 @@
 spring:
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
-
   jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: none
     properties:
       hibernate:
+        ddl-auto: none
         "[format_sql]": true
         "[show_sql]": false
 
 logging:
   level:
-    root: info
-    "[org.springframework.web]": warn
-    "[org.hibernate.SQL]": off
+    root: INFO
+    "[com.inssider]": INFO
+    "[org.springframework.web]": WARN
+    "[org.springframework.security]": ERROR
+    "[org.hibernate]": WARN
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health
+management.endpoints.web.exposure.include: health

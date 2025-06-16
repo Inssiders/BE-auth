@@ -2,12 +2,12 @@ server.port: 8080
 
 spring:
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/dev
+    url: jdbc:postgresql://localhost:5432/dev
     username: user
     password: user
   mail:
     username: inssider.api@gmail.com
-    password: hxjbodlooqmrrwgi # https://myaccount.google.com/u/3/apppasswords
+    password: oquecufsaxeufnav # https://myaccount.google.com/u/3/apppasswords
 
 spring.jpa.hibernate.ddl-auto: create-drop
 
@@ -15,8 +15,6 @@ management.endpoints.web.exposure.include: "*"
 
 spring.output.ansi.enabled: always
 logging.level:
-  "[org.hibernate.SQL]": debug
-  "[org.hibernate.type.descriptor.sql.BasicBinder]": trace
-  "[org.hibernate.tool.hbm2ddl]": debug
-  "[org.springframework.web]": debug
   "[com.inssider]": debug
+  "[org.springframework.security]": debug
+  "[org.springframework.boot.autoconfigure]": warn

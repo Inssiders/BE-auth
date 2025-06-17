@@ -98,39 +98,31 @@ class AuthTokenServiceImpl implements AuthTokenService {
     // 초기에 회원가입을 진행을 위해 사용되었다면 이메일만 존재하는 임시 계정이 반환됩니다.
     Account account = authenticator.redeemAuthorizationCode(authorizationCode);
 
-    try {
-      return generateTokenResponse(AUTHORIZATION_CODE, account);
-    } catch (Exception e) {
-      String accessToken = generateSingleAccessToken(account.getEmail(), accessTokenExpiration);
-      return new AuthTokenResponse(accessToken, null, TOKEN_TYPE_BEARER, accessTokenExpiration);
-    }
+    return generateTokenResponse(AUTHORIZATION_CODE, account);
   }
 
   /**
    * 계정의 Refresh Token을 무효화합니다.
    *
    * @param account 토큰을 무효화할 계정
-   * @throws NullPointerException account가 null인 경우
-   * @throws IllegalArgumentException 계정에 Refresh Token이 없는 경우
    */
   @Override
-  public void revokeRefreshToken(Account account)
-      throws NullPointerException, IllegalArgumentException {
-    RefreshToken refreshToken = account.getRefreshToken();
-    refreshTokenRepository.delete(refreshToken);
+  public void revokeRefreshToken(Account account) {
+    Optional.ofNullable(account.getRefreshToken()).ifPresent(refreshTokenRepository::delete);
   }
 
   /**
    * 토큰 문자열을 사용하여 해당 Refresh Token을 무효화합니다.
    *
    * @param token 무효화할 Refresh Token 문자열
-   * @throws NoSuchElementException 토큰과 연관된 계정을 찾을 수 없는 경우
    */
   @Override
-  public void revokeRefreshToken(String token)
-      throws NullPointerException, IllegalArgumentException {
-    Account account = authenticator.getAccountFromToken(token);
-    revokeRefreshToken(account);
+  public void revokeRefreshToken(String token) {
+    try {
+      Account account = authenticator.getAccountFromToken(token);
+      revokeRefreshToken(account);
+    } catch (Exception _e) {
+    }
   }
 
   /**
@@ -141,14 +133,27 @@ class AuthTokenServiceImpl implements AuthTokenService {
    * @return Grant Type에 맞는 토큰 응답
    */
   AuthTokenResponse generateTokenResponse(GrantType grantType, Account account) {
-    assert account != null && account.getId() > 0 : "Account ID must be positive";
+    assert account != null : "Account must not be null";
     return switch (grantType) {
       case AUTHORIZATION_CODE -> {
-        String accessToken =
-            generateToken(account, accessTokenExpiration, TOKEN_TYPE_SINGLE_ACCESS);
-        yield new AuthTokenResponse(accessToken, null, TOKEN_TYPE_BEARER, accessTokenExpiration);
+        // 이미 가입된 계정인지 확인 (ID가 있는지로 판단)
+        if (account.getId() != null && account.getId() > 0) {
+          // 가입된 계정: 정상적인 access 토큰 발급
+          String accessToken =
+              generateToken(account, accessTokenExpiration, TOKEN_TYPE_SINGLE_ACCESS);
+          // String refreshToken = generateToken(account, refreshTokenExpiration,
+          // TOKEN_TYPE_REFRESH);
+          // createOrUpdateRefreshToken(account, refreshToken);
+          yield new AuthTokenResponse(accessToken, null, TOKEN_TYPE_BEARER, accessTokenExpiration);
+        } else {
+          // 미가입 계정: single_access 토큰 발급 (회원가입용)
+          String accessToken =
+              generateToken(account, accessTokenExpiration, TOKEN_TYPE_SINGLE_ACCESS);
+          yield new AuthTokenResponse(accessToken, null, TOKEN_TYPE_BEARER, accessTokenExpiration);
+        }
       }
       case PASSWORD, REFRESH_TOKEN -> {
+        assert account.getId() > 0 : "Account ID must be positive for PASSWORD/REFRESH_TOKEN";
         // 1. generate new tokens
         String accessToken = generateToken(account, accessTokenExpiration, TOKEN_TYPE_ACCESS);
         String refreshToken = generateToken(account, refreshTokenExpiration, TOKEN_TYPE_REFRESH);
@@ -201,21 +206,26 @@ class AuthTokenServiceImpl implements AuthTokenService {
    */
   String generateToken(Account account, long expiration, String tokenType) {
     Instant now = Instant.now();
-    long accountId = account.getId();
 
-    JwtClaimsSet claims =
+    JwtClaimsSet.Builder claimsBuilder =
         JwtClaimsSet.builder()
-            .subject(String.valueOf(accountId))
             .claim("type", tokenType)
             .issuer(ISSUER)
             .audience(List.of(AUDIENCE))
             .issuedAt(now)
             .expiresAt(now.plus(expiration, ChronoUnit.SECONDS))
-            .id(UUID.randomUUID().toString())
-            .build();
+            .id(UUID.randomUUID().toString());
 
-    var token = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-    return token;
+    try {
+      claimsBuilder.subject(String.valueOf(account.getId()));
+    } catch (Exception e) {
+      if (TOKEN_TYPE_SINGLE_ACCESS.equals(tokenType)) {
+        claimsBuilder.claim("email", account.getEmail());
+      }
+    }
+
+    JwtClaimsSet claims = claimsBuilder.build();
+    return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
   }
 
   String generateSingleAccessToken(String email, long expiration) {

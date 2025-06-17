@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -26,36 +25,42 @@ class JwtConverterConfig {
   private final AccountService accountService;
 
   @Bean
-  public Converter<Jwt, AbstractAuthenticationToken> customJwtAuthenticationConverter() {
+  public Converter<Jwt, JwtAuthenticationToken> customJwtAuthenticationConverter() {
     return new CustomAuthenticationConverter();
   }
 
-  class CustomAuthenticationConverter implements Converter<Jwt, AbstractAuthenticationToken> {
+  public class CustomAuthenticationConverter implements Converter<Jwt, JwtAuthenticationToken> {
     private static final String ROLES_CLAIM = "roles";
     private static final String SCOPE_CLAIM = "scope";
     private static final String ROLE_PREFIX = "ROLE_";
     private static final String SCOPE_PREFIX = "SCOPE_";
 
     @Override
-    public AbstractAuthenticationToken convert(Jwt jwt) {
+    public JwtAuthenticationToken convert(Jwt jwt) {
       Set<GrantedAuthority> authorities = getAuthoritiesFrom(jwt);
+
+      long accountId;
       try {
-        Long accountId = Long.parseLong(jwt.getSubject());
-        Account account =
-            accountService
-                .findById(accountId)
-                .orElseThrow(() -> new BadCredentialsException("Account not found: " + accountId));
-
-        validateTokenType(jwt, account);
-
-        authorities.add(new SimpleGrantedAuthority(ROLE_PREFIX + account.getRole().name()));
-
-        return new AccountJwtAuthenticationToken(
-            new JwtAuthenticationToken(jwt, authorities), account);
-      } catch (Exception e) {
-        // type: single_access on pre-registration
-        return new JwtAuthenticationToken(jwt, authorities);
+        accountId = Long.parseLong(jwt.getSubject());
+        assert accountId > 0 : "Account ID must be a positive number";
+      } catch (NumberFormatException e) {
+        if ("single_access".equals(jwt.getClaimAsString("type"))) {
+          // type: single_access on pre-registration
+          return new JwtAuthenticationToken(jwt, authorities);
+        }
+        throw new BadCredentialsException("Invalid JWT subject: " + jwt.getSubject(), e);
       }
+
+      Account account =
+          accountService
+              .findById(accountId)
+              .orElseThrow(() -> new BadCredentialsException("Account not found: " + accountId));
+      validateTokenType(jwt, account);
+
+      authorities.add(new SimpleGrantedAuthority(ROLE_PREFIX + account.getRole().name()));
+
+      return new AccountJwtAuthenticationToken(
+          new JwtAuthenticationToken(jwt, authorities), account);
     }
 
     private Set<GrantedAuthority> getAuthoritiesFrom(Jwt jwt) {

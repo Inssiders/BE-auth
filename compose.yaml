@@ -8,7 +8,7 @@
 # == POSTGRES TEMPLATE ==
 x-postgres-template: &postgres-template
   image: postgres:latest
-  env_file: [".env"]
+  ports: ["${POSTGRES_PORT}:${POSTGRES_PORT}"]
   healthcheck:
     test:
       ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
@@ -30,14 +30,10 @@ x-app-template: &app-template
 # == DOCKER COMPOSE ==
 services:
   # == NO PROFILE ==
+  # 환경변수는 .env.example 값이 우선적으로 사용됩니다.
   postgres:
     <<: *postgres-template
-    ports: ["${POSTGRES_PORT}:${POSTGRES_PORT}"]
-    environment:
-      # ref: .env
-      POSTGRES_DB: ${POSTGRES_DB:?error}
-      POSTGRES_USER: ${POSTGRES_USER:?error}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?error}
+    env_file: [".env", ".env.example"]
 
   # == PROFILE: STAGE ==
   # STAGE는 DEV 산출물이 Docker를 기반으로 정상적으로 동작하는지 검증하기 위한 환경입니다.

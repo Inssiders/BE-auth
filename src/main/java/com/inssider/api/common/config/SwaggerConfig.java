@@ -13,7 +13,6 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -23,6 +22,7 @@ import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.Environment;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.method.HandlerMethod;
 
@@ -31,6 +31,8 @@ class SwaggerConfig {
 
   @Autowired(required = false)
   private BuildProperties buildProperties;
+
+  @Autowired private Environment environment;
 
   @Bean
   @Primary
@@ -45,18 +47,21 @@ class SwaggerConfig {
     String version =
         Optional.ofNullable(buildProperties).map(BuildProperties::getVersion).orElse("DEVELOPMENT");
 
-    return new OpenAPI()
-        .info(
-            new Info()
-                .title("Inssider Auth API")
-                .version(version)
-                .description("Inssider Auth API Documentation"))
-        .servers(
-            List.of(
-                new Server().url("http://52.78.186.60").description("Production Server"),
-                new Server().url("https://inssider.oomia.click").description("Auth Server"),
-                new Server().url("http://localhost:8080").description("Development Server")))
-        .components(components());
+    var config =
+        new OpenAPI()
+            .info(
+                new Info()
+                    .title("Inssider Auth API")
+                    .version(version)
+                    .description("Inssider Auth API Documentation"))
+            .components(components());
+
+    if (Arrays.asList(environment.getActiveProfiles()).contains("prod")) {
+      config.addServersItem(
+          new Server().url("https://inssider.oomia.click").description("Production"));
+    }
+
+    return config;
   }
 
   private Components components() {

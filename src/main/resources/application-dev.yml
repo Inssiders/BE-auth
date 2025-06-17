@@ -8,6 +8,7 @@ spring:
   mail:
     username: inssider.api@gmail.com
     password: oquecufsaxeufnav # https://myaccount.google.com/u/3/apppasswords
+    test-connection: true
 
 spring.jpa.hibernate.ddl-auto: create-drop
 

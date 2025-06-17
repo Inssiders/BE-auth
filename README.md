@@ -45,6 +45,9 @@ COMPOSE_BAKE=true docker compose --profile stage up --wait
 # production
 
 ```sh
+# 개발 환경에서 임시로 프로덕션 환경 실행 (데이터 수정이 이루어지지 않도록 주의)
+# export $(grep -v '^#' .env | grep -v '^$' | xargs) && ./gradlew bootRun -Dspring.profiles.active=prod
+
 # cold-start 상황에서 데이터베이스 초기화
 # docker compose --profile prod down --volumes --remove-orphans
 # SPRING_PROFILES_ACTIVE=stage docker compose --profile prod up --wait

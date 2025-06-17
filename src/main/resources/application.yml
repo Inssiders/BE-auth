@@ -1,13 +1,6 @@
 # https://docs.spring.io/spring-boot/appendix/application-properties
 server.port: ${APP_PORT}
 
-management:
-  server:
-    base-path: /actuator
-  info:
-    build:
-      enabled: true
-
 spring:
   application:
     name: inssider-main

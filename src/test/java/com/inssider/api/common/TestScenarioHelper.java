@@ -1,7 +1,6 @@
 package com.inssider.api.common;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,7 +59,6 @@ public class TestScenarioHelper {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().is2xxSuccessful())
-            .andDo(print())
             .andReturn()
             .getResponse()
             .getContentAsString();
@@ -158,7 +156,7 @@ public class TestScenarioHelper {
     Instant now = Instant.now();
     JwtClaimsSet claims =
         JwtClaimsSet.builder()
-            .issuer("api.inssider.com")
+            .issuer("https://inssider.oomia.click")
             .issuedAt(now)
             .audience(List.of("inssider-app"))
             .subject(String.valueOf(accountId))
@@ -173,10 +171,10 @@ public class TestScenarioHelper {
     Instant now = Instant.now();
     JwtClaimsSet claims =
         JwtClaimsSet.builder()
-            .issuer("api.inssider.com")
+            .claim("email", email)
+            .issuer("https://inssider.oomia.click")
             .issuedAt(now)
             .audience(List.of("inssider-app"))
-            .subject(email)
             .expiresAt(now.plus(600, ChronoUnit.SECONDS))
             .claim("type", "single_access")
             .id(UUID.randomUUID().toString())

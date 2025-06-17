@@ -7,6 +7,7 @@ import com.inssider.api.common.Util;
 import com.inssider.api.domains.account.Account;
 import com.inssider.api.domains.account.AccountDataTypes.RegisterType;
 import com.inssider.api.domains.account.AccountService;
+import com.inssider.api.domains.profile.UserProfileDataTypes.ProfileContext;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +25,8 @@ class UserProfileEntityBehaviorTests {
   void 사용자프로필_저장_및_조회() {
     Account account = register(Util.accountGenerator().get());
     UserProfile userProfile = account.getProfile();
-    String profileNickname = service.findUserProfileById(account.getId()).nickname();
+    String profileNickname =
+        service.findUserProfileById(account.getId(), ProfileContext.SELF).nickname();
 
     assertNotNull(userProfile);
     assertEquals(account, userProfile.getAccount());
@@ -36,7 +38,6 @@ class UserProfileEntityBehaviorTests {
   void 계정_소프트_삭제시_프로필도_소프트_삭제되어야_한다() {
     Account account = register(Util.accountGenerator().get());
     Long accountId = account.getId();
-    service.findUserProfileById(accountId); // 프로필 조회
 
     accountService.softDelete(accountId); // 계정 삭제
 

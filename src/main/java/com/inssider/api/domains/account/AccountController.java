@@ -6,18 +6,18 @@ import com.inssider.api.domains.account.AccountRequestsDto.PatchAccountPasswordR
 import com.inssider.api.domains.account.AccountRequestsDto.PostAccountRequest;
 import com.inssider.api.domains.account.AccountResponsesDto.PatchAccountMePasswordResponse;
 import com.inssider.api.domains.account.AccountResponsesDto.PostAccountResponse;
-import com.inssider.api.domains.auth.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -26,20 +26,17 @@ import org.springframework.web.bind.annotation.RestController;
 class AccountController {
 
   private final AccountService service;
-  private final AuthService authService;
 
-  @RequestMapping(value = "/{email}", method = RequestMethod.GET)
-  ResponseEntity<ResponseWrapper<Void>> isAccountAvailable(@PathVariable("email") String email) {
-    int status = service.existsByEmail(email) ? 204 : 404;
-    return BaseResponse.of(status, null);
+  @GetMapping("/check")
+  ResponseEntity<ResponseWrapper<Void>> checkEmailAvailability(@RequestParam String email) {
+    boolean isAvailable = !email.isBlank() && service.existsByEmail(email);
+    return isAvailable ? BaseResponse.of(200, null) : BaseResponse.of(404, null);
   }
 
   @PostMapping
-  // @SecurityRequirement(name = "AccessToken")
   ResponseEntity<ResponseWrapper<PostAccountResponse>> register(
-      // single_access token은 JWT.sub를 직접 활용해야 함
       @AuthenticationPrincipal Jwt jwt, @RequestBody PostAccountRequest reqBody) {
-    var email = jwt.getSubject();
+    String email = jwt.getClaim("email");
     if (!email.equals(reqBody.email())) {
       throw new IllegalArgumentException("Email in request body must match authenticated email");
     }
@@ -57,8 +54,8 @@ class AccountController {
   @PatchMapping("/me/password")
   ResponseEntity<ResponseWrapper<PatchAccountMePasswordResponse>> changePassword(
       @AuthenticationPrincipal Account account, @RequestBody PatchAccountPasswordRequest reqBody) {
+    Assert.notNull(account, "Account must not be null");
     var response = service.patchAccountPassword(account.getId(), reqBody.password());
-    authService.revokeRefreshToken(account);
     return BaseResponse.of(200, new PatchAccountMePasswordResponse(response.getUpdatedAt()));
   }
 }

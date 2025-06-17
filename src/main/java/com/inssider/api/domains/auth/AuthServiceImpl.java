@@ -57,6 +57,8 @@ class AuthServiceImpl implements AuthService {
 
   @Override
   public void revokeRefreshToken(Account account) {
-    tokenService.revokeRefreshToken(account);
+    if (account != null) {
+      tokenService.revokeRefreshToken(account);
+    }
   }
 }

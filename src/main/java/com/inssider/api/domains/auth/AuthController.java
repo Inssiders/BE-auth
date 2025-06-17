@@ -74,7 +74,9 @@ class AuthController {
   @DeleteMapping("/token")
   public ResponseEntity<ResponseWrapper<Void>> revokeToken(
       @AuthenticationPrincipal Account account) {
-    authService.revokeRefreshToken(account);
+    if (account != null) {
+      authService.revokeRefreshToken(account);
+    }
     return BaseResponse.of(200, null);
   }
 }

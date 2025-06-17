@@ -14,7 +14,7 @@ public class AccountJwtAuthenticationToken extends JwtAuthenticationToken {
   }
 
   @Override
-  public Account getPrincipal() {
-    return account;
+  public Object getPrincipal() {
+    return account == null ? super.getPrincipal() : account;
   }
 }

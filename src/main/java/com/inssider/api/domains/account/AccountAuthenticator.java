@@ -1,7 +1,5 @@
 package com.inssider.api.domains.account;
 
-import com.inssider.api.domains.account.AccountDataTypes.AccountType;
-import com.inssider.api.domains.account.AccountDataTypes.RoleType;
 import com.inssider.api.domains.auth.code.AuthCodeService;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -37,14 +35,7 @@ public class AccountAuthenticator {
 
   public Account redeemAuthorizationCode(UUID authCodeId) {
     String email = authCodeService.redeem(authCodeId).getEmail();
-    return repository
-        .findByEmail(email)
-        .orElse(
-            Account.builder()
-                .accountType(AccountType.PASSWORD)
-                .role(RoleType.USER)
-                .email(email)
-                .build());
+    return repository.findByEmail(email).orElse(Account.builder().email(email).build());
   }
 
   public Account getAccountFromToken(String token) throws NoSuchElementException {

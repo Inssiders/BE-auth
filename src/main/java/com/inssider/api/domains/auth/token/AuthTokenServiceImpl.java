@@ -25,6 +25,13 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 class AuthTokenServiceImpl implements AuthTokenService {
 
+  private static final String ISSUER = "https://inssider.oomia.click";
+  private static final String AUDIENCE = "inssider-app";
+  private static final String TOKEN_TYPE_ACCESS = "access";
+  private static final String TOKEN_TYPE_REFRESH = "refresh";
+  private static final String TOKEN_TYPE_SINGLE_ACCESS = "single_access";
+  private static final String TOKEN_TYPE_BEARER = "Bearer";
+
   private final RefreshTokenRepository refreshTokenRepository;
 
   // common
@@ -66,7 +73,7 @@ class AuthTokenServiceImpl implements AuthTokenService {
    */
   @Override
   public AuthTokenResponse permitTokensByRefreshToken(String refreshToken) {
-    Account account = authenticator.getAccountFromToken(refreshToken);
+    var account = authenticator.getAccountFromToken(refreshToken);
 
     // 저장된 토큰과 일치하는지 검증
     var storedRefreshToken = account.getRefreshToken().getToken();
@@ -97,27 +104,24 @@ class AuthTokenServiceImpl implements AuthTokenService {
    * 계정의 Refresh Token을 무효화합니다.
    *
    * @param account 토큰을 무효화할 계정
-   * @throws NullPointerException account가 null인 경우
-   * @throws IllegalArgumentException 계정에 Refresh Token이 없는 경우
    */
   @Override
-  public void revokeRefreshToken(Account account)
-      throws NullPointerException, IllegalArgumentException {
-    RefreshToken refreshToken = account.getRefreshToken();
-    refreshTokenRepository.delete(refreshToken);
+  public void revokeRefreshToken(Account account) {
+    Optional.ofNullable(account.getRefreshToken()).ifPresent(refreshTokenRepository::delete);
   }
 
   /**
    * 토큰 문자열을 사용하여 해당 Refresh Token을 무효화합니다.
    *
    * @param token 무효화할 Refresh Token 문자열
-   * @throws NoSuchElementException 토큰과 연관된 계정을 찾을 수 없는 경우
    */
   @Override
-  public void revokeRefreshToken(String token)
-      throws NullPointerException, IllegalArgumentException {
-    Account account = authenticator.getAccountFromToken(token);
-    revokeRefreshToken(account);
+  public void revokeRefreshToken(String token) {
+    try {
+      Account account = authenticator.getAccountFromToken(token);
+      revokeRefreshToken(account);
+    } catch (Exception _e) {
+    }
   }
 
   /**
@@ -128,20 +132,24 @@ class AuthTokenServiceImpl implements AuthTokenService {
    * @return Grant Type에 맞는 토큰 응답
    */
   AuthTokenResponse generateTokenResponse(GrantType grantType, Account account) {
+    assert account != null : "Account must not be null";
     return switch (grantType) {
       case AUTHORIZATION_CODE -> {
-        String accessToken = generateSingleAccessToken(account.getEmail(), accessTokenExpiration);
-        yield new AuthTokenResponse(accessToken, null, "Bearer", accessTokenExpiration);
+        String accessToken =
+            generateToken(account, accessTokenExpiration, TOKEN_TYPE_SINGLE_ACCESS);
+        yield new AuthTokenResponse(accessToken, null, TOKEN_TYPE_BEARER, accessTokenExpiration);
       }
       case PASSWORD, REFRESH_TOKEN -> {
+        assert account.getId() > 0 : "Account ID must be positive for PASSWORD/REFRESH_TOKEN";
         // 1. generate new tokens
-        String accessToken = generateToken(account, accessTokenExpiration, "access");
-        String refreshToken = generateToken(account, refreshTokenExpiration, "refresh");
+        String accessToken = generateToken(account, accessTokenExpiration, TOKEN_TYPE_ACCESS);
+        String refreshToken = generateToken(account, refreshTokenExpiration, TOKEN_TYPE_REFRESH);
 
         // 2. create or update refresh token
         createOrUpdateRefreshToken(account, refreshToken);
 
-        yield new AuthTokenResponse(accessToken, refreshToken, "Bearer", accessTokenExpiration);
+        yield new AuthTokenResponse(
+            accessToken, refreshToken, TOKEN_TYPE_BEARER, accessTokenExpiration);
       }
     };
   }
@@ -163,7 +171,6 @@ class AuthTokenServiceImpl implements AuthTokenService {
                   return existing;
                 })
             .orElse(new RefreshToken(account, refreshToken));
-
     refreshTokenRepository.save(entity);
   }
 
@@ -185,21 +192,27 @@ class AuthTokenServiceImpl implements AuthTokenService {
    */
   String generateToken(Account account, long expiration, String tokenType) {
     Instant now = Instant.now();
-    Long accountId = account.getId();
 
-    JwtClaimsSet claims =
+    JwtClaimsSet.Builder claimsBuilder =
         JwtClaimsSet.builder()
-            .issuer("api.inssider.com")
-            .issuedAt(now)
-            .audience(List.of("inssider-app"))
-            .subject(String.valueOf(accountId))
-            .expiresAt(now.plus(expiration, ChronoUnit.SECONDS))
             .claim("type", tokenType)
-            .id(UUID.randomUUID().toString())
-            .build();
+            .issuer(ISSUER)
+            .audience(List.of(AUDIENCE))
+            .issuedAt(now)
+            .expiresAt(now.plus(expiration, ChronoUnit.SECONDS))
+            .id(UUID.randomUUID().toString());
 
-    var token = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-    return token;
+    try {
+      claimsBuilder.subject(String.valueOf(account.getId()));
+    } catch (Exception _e) {
+    }
+
+    if (TOKEN_TYPE_SINGLE_ACCESS.equals(tokenType)) {
+      claimsBuilder.claim("email", account.getEmail());
+    }
+
+    JwtClaimsSet claims = claimsBuilder.build();
+    return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
   }
 
   String generateSingleAccessToken(String email, long expiration) {
@@ -207,12 +220,12 @@ class AuthTokenServiceImpl implements AuthTokenService {
 
     JwtClaimsSet claims =
         JwtClaimsSet.builder()
-            .issuer("api.inssider.com")
+            .claim("email", email)
+            .claim("type", TOKEN_TYPE_SINGLE_ACCESS)
+            .issuer(ISSUER)
+            .audience(List.of(AUDIENCE))
             .issuedAt(now)
-            .audience(List.of("inssider-app"))
-            .subject(email) // 이메일을 subject로 사용
             .expiresAt(now.plus(expiration, ChronoUnit.SECONDS))
-            .claim("type", "single_access")
             .id(UUID.randomUUID().toString())
             .build();
 

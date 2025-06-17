@@ -3,15 +3,16 @@ package com.inssider.api.common.config.security;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -19,10 +20,10 @@ import org.springframework.security.web.SecurityFilterChain;
 @RequiredArgsConstructor
 class OAuth2ResourceServerSecurityConfig {
 
-  private final Converter<Jwt, AbstractAuthenticationToken> customConverter;
+  private final Converter<Jwt, JwtAuthenticationToken> customConverter;
 
   @Bean
-  @Order(1)
+  @Order(value = Ordered.HIGHEST_PRECEDENCE)
   public SecurityFilterChain publicPathsChain(HttpSecurity http) throws Exception {
     return http.securityMatchers(
             matchers ->
@@ -40,7 +41,7 @@ class OAuth2ResourceServerSecurityConfig {
   }
 
   @Bean
-  @Order(2)
+  @Order(value = Ordered.LOWEST_PRECEDENCE)
   public SecurityFilterChain protectedApiChain(HttpSecurity http) throws Exception {
     return http.securityMatchers(matchers -> matchers.requestMatchers("/api/**"))
         .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
@@ -66,14 +67,14 @@ class OAuth2ResourceServerSecurityConfig {
   private String[] publicGetPaths() {
     return new String[] {
       "/api/accounts",
-      "/api/accounts/{email}",
+      "/api/accounts/check",
       "/api/profiles",
       "/api/profiles/index",
-      "/api/profiles/{id}",
+      "/api/profiles/{id:[0-9]+}",
       "/api/posts",
-      "/api/posts/{id}",
+      "/api/posts/{id:[0-9]+}",
       "/api/memes/sitemap",
-      "/api/comments/{id}",
+      "/api/comments/{id:[0-9]+}",
       "/api/categories"
     };
   }

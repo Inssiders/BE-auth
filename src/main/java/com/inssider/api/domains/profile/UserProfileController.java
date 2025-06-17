@@ -5,6 +5,7 @@ import com.inssider.api.common.response.BaseResponse.ResponseWrapper;
 import com.inssider.api.common.response.StandardResponse.GetIndexResponse;
 import com.inssider.api.common.response.StandardResponse.QueryResponse;
 import com.inssider.api.domains.account.Account;
+import com.inssider.api.domains.profile.UserProfileDataTypes.ProfileContext;
 import com.inssider.api.domains.profile.UserProfileRequestsDto.PatchProfileMeRequest;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.GetPrivateProfileResponse;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.GetProfileMeResponse;
@@ -48,7 +49,7 @@ class UserProfileController {
 
   @GetMapping("/{id}")
   ResponseEntity<ResponseWrapper<GetProfileResponse>> getProfile(@PathVariable("id") Long id) {
-    var profileData = service.findUserProfileById(id);
+    var profileData = service.findUserProfileById(id, ProfileContext.PUBLIC);
     return switch (profileData) {
       case GetPublicProfileResponse pub -> BaseResponse.of(200, pub);
       case GetPrivateProfileResponse priv -> BaseResponse.of(200, priv);
@@ -59,8 +60,9 @@ class UserProfileController {
   @GetMapping("/me")
   ResponseEntity<ResponseWrapper<GetProfileMeResponse>> getProfile(
       @AuthenticationPrincipal Account account) {
-    var profileData = service.findUserProfileById(account.getId());
-    return switch (profileData) {
+    long accountId = account.getId();
+    GetProfileResponse data = service.findUserProfileById(accountId, ProfileContext.SELF);
+    return switch (data) {
       case GetProfileMeResponse owner -> BaseResponse.of(200, owner);
       default -> BaseResponse.of(403, null);
     };

@@ -1,6 +1,7 @@
 package com.inssider.api.domains.profile;
 
 import com.inssider.api.common.response.StandardResponse.QueryResponse;
+import com.inssider.api.domains.profile.UserProfileDataTypes.ProfileContext;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.GetProfileResponse;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.PatchProfileMeResponse;
 import java.util.List;
@@ -13,7 +14,7 @@ public interface UserProfileService {
 
   long count();
 
-  GetProfileResponse findUserProfileById(Long id);
+  GetProfileResponse findUserProfileById(Long id, ProfileContext context);
 
   PatchProfileMeResponse updateUserProfile(
       Long id,

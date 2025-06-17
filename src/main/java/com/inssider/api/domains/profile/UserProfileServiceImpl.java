@@ -1,6 +1,7 @@
 package com.inssider.api.domains.profile;
 
 import com.inssider.api.common.response.StandardResponse.QueryResponse;
+import com.inssider.api.domains.profile.UserProfileDataTypes.ProfileContext;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.GetProfileResponse;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.PatchProfileMeResponse;
 import java.util.List;
@@ -27,9 +28,9 @@ class UserProfileServiceImpl implements UserProfileService {
   }
 
   @Override
-  public GetProfileResponse findUserProfileById(Long id) {
+  public GetProfileResponse findUserProfileById(Long id, ProfileContext context) {
     UserProfile entity = repository.findById(id).orElseThrow();
-    return entity.convertToDto();
+    return entity.convertToDto(context);
   }
 
   @Override
@@ -51,7 +52,8 @@ class UserProfileServiceImpl implements UserProfileService {
 
     entity = repository.save(entity);
 
-    return new PatchProfileMeResponse(findUserProfileById(id), entity.getUpdatedAt());
+    return new PatchProfileMeResponse(
+        findUserProfileById(id, ProfileContext.SELF), entity.getUpdatedAt());
   }
 
   @Override

@@ -1,7 +1,6 @@
 package com.inssider.api.common;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,7 +59,6 @@ public class TestScenarioHelper {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().is2xxSuccessful())
-            .andDo(print())
             .andReturn()
             .getResponse()
             .getContentAsString();
@@ -176,7 +174,7 @@ public class TestScenarioHelper {
             .issuer("api.inssider.com")
             .issuedAt(now)
             .audience(List.of("inssider-app"))
-            .subject(email)
+            .claim("email", email)
             .expiresAt(now.plus(600, ChronoUnit.SECONDS))
             .claim("type", "single_access")
             .id(UUID.randomUUID().toString())

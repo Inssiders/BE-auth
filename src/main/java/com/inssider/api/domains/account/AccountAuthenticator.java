@@ -1,5 +1,6 @@
 package com.inssider.api.domains.account;
 
+import com.inssider.api.common.Util;
 import com.inssider.api.domains.account.AccountDataTypes.AccountType;
 import com.inssider.api.domains.account.AccountDataTypes.RoleType;
 import com.inssider.api.domains.auth.code.AuthCodeService;
@@ -44,6 +45,7 @@ public class AccountAuthenticator {
                 .accountType(AccountType.PASSWORD)
                 .role(RoleType.USER)
                 .email(email)
+                .password(Util.passwordGenerator().get())
                 .build());
   }
 

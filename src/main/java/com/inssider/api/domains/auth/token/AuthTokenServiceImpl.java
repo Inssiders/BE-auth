@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -24,6 +25,13 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 class AuthTokenServiceImpl implements AuthTokenService {
+
+  private static final String ISSUER = "api.inssider.com";
+  private static final String AUDIENCE = "inssider-app";
+  private static final String TOKEN_TYPE_ACCESS = "access";
+  private static final String TOKEN_TYPE_REFRESH = "refresh";
+  private static final String TOKEN_TYPE_SINGLE_ACCESS = "single_access";
+  private static final String TOKEN_TYPE_BEARER = "Bearer";
 
   private final RefreshTokenRepository refreshTokenRepository;
 
@@ -130,18 +138,24 @@ class AuthTokenServiceImpl implements AuthTokenService {
   AuthTokenResponse generateTokenResponse(GrantType grantType, Account account) {
     return switch (grantType) {
       case AUTHORIZATION_CODE -> {
-        String accessToken = generateSingleAccessToken(account.getEmail(), accessTokenExpiration);
-        yield new AuthTokenResponse(accessToken, null, "Bearer", accessTokenExpiration);
+        String accessToken;
+        try {
+          accessToken = generateToken(account, accessTokenExpiration, TOKEN_TYPE_SINGLE_ACCESS);
+        } catch (Exception e) {
+          accessToken = generateSingleAccessToken(account.getEmail(), accessTokenExpiration);
+        }
+        yield new AuthTokenResponse(accessToken, null, TOKEN_TYPE_BEARER, accessTokenExpiration);
       }
       case PASSWORD, REFRESH_TOKEN -> {
         // 1. generate new tokens
-        String accessToken = generateToken(account, accessTokenExpiration, "access");
-        String refreshToken = generateToken(account, refreshTokenExpiration, "refresh");
+        String accessToken = generateToken(account, accessTokenExpiration, TOKEN_TYPE_ACCESS);
+        String refreshToken = generateToken(account, refreshTokenExpiration, TOKEN_TYPE_REFRESH);
 
         // 2. create or update refresh token
         createOrUpdateRefreshToken(account, refreshToken);
 
-        yield new AuthTokenResponse(accessToken, refreshToken, "Bearer", accessTokenExpiration);
+        yield new AuthTokenResponse(
+            accessToken, refreshToken, TOKEN_TYPE_BEARER, accessTokenExpiration);
       }
     };
   }
@@ -183,18 +197,19 @@ class AuthTokenServiceImpl implements AuthTokenService {
    * @param tokenType 토큰 타입 ("access", "refresh", "single_access")
    * @return 생성된 JWT 토큰 문자열
    */
-  String generateToken(Account account, long expiration, String tokenType) {
+  String generateToken(@NonNull Account account, long expiration, String tokenType) {
     Instant now = Instant.now();
     Long accountId = account.getId();
+    assert accountId != null : "Account ID must not be null";
 
     JwtClaimsSet claims =
         JwtClaimsSet.builder()
-            .issuer("api.inssider.com")
-            .issuedAt(now)
-            .audience(List.of("inssider-app"))
             .subject(String.valueOf(accountId))
-            .expiresAt(now.plus(expiration, ChronoUnit.SECONDS))
             .claim("type", tokenType)
+            .issuer(ISSUER)
+            .audience(List.of(AUDIENCE))
+            .issuedAt(now)
+            .expiresAt(now.plus(expiration, ChronoUnit.SECONDS))
             .id(UUID.randomUUID().toString())
             .build();
 
@@ -207,12 +222,12 @@ class AuthTokenServiceImpl implements AuthTokenService {
 
     JwtClaimsSet claims =
         JwtClaimsSet.builder()
-            .issuer("api.inssider.com")
+            .claim("email", email)
+            .claim("type", TOKEN_TYPE_SINGLE_ACCESS)
+            .issuer(ISSUER)
+            .audience(List.of(AUDIENCE))
             .issuedAt(now)
-            .audience(List.of("inssider-app"))
-            .subject(email) // 이메일을 subject로 사용
             .expiresAt(now.plus(expiration, ChronoUnit.SECONDS))
-            .claim("type", "single_access")
             .id(UUID.randomUUID().toString())
             .build();
 

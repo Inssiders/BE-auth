@@ -39,22 +39,23 @@ class JwtConverterConfig {
     @Override
     public AbstractAuthenticationToken convert(Jwt jwt) {
       Set<GrantedAuthority> authorities = getAuthoritiesFrom(jwt);
+      try {
+        Long accountId = Long.parseLong(jwt.getSubject());
+        Account account =
+            accountService
+                .findById(accountId)
+                .orElseThrow(() -> new BadCredentialsException("Account not found: " + accountId));
 
-      if ("single_access".equals(jwt.getClaimAsString("type"))) {
+        validateTokenType(jwt, account);
+
+        authorities.add(new SimpleGrantedAuthority(ROLE_PREFIX + account.getRole().name()));
+
+        return new AccountJwtAuthenticationToken(
+            new JwtAuthenticationToken(jwt, authorities), account);
+      } catch (Exception e) {
+        // type: single_access on pre-registration
         return new JwtAuthenticationToken(jwt, authorities);
       }
-      Long accountId = Long.parseLong(jwt.getSubject());
-      Account account =
-          accountService
-              .findById(accountId)
-              .orElseThrow(() -> new BadCredentialsException("Account not found: " + accountId));
-
-      validateTokenType(jwt, account);
-
-      authorities.add(new SimpleGrantedAuthority(ROLE_PREFIX + account.getRole().name()));
-
-      return new AccountJwtAuthenticationToken(
-          new JwtAuthenticationToken(jwt, authorities), account);
     }
 
     private Set<GrantedAuthority> getAuthoritiesFrom(Jwt jwt) {

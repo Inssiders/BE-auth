@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,9 +13,11 @@ import com.inssider.api.common.TestScenarioHelper;
 import com.inssider.api.common.Util;
 import com.inssider.api.domains.account.AccountDataTypes.RegisterType;
 import com.inssider.api.domains.auth.AuthDataTypes.GrantType;
+import com.inssider.api.domains.auth.AuthRequestsDto.AuthTokenWithAuthorizationCodeRequest;
 import com.inssider.api.domains.auth.AuthRequestsDto.AuthTokenWithPasswordRequest;
 import com.inssider.api.domains.auth.AuthService;
 import com.inssider.api.domains.profile.UserProfileService;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -107,19 +108,20 @@ class AccountControllerTest {
   void 비밀번호_변경() throws Exception {
     // 0. 회원가입 요청 given
     String email;
-    String rawPassword;
     Account account = Util.accountGenerator().get();
     {
       email = account.getEmail();
-      rawPassword = account.getPassword();
       register(account);
     }
     assertEquals(1, accountService.count());
 
-    // 1. 로그인 given
+    // 1. 이메일 인증 로그인 given
     String accessToken;
     {
-      var request = new AuthTokenWithPasswordRequest(GrantType.PASSWORD, email, rawPassword);
+      String otp = helper.postAuthEmailChallenge(email);
+      UUID authCode = helper.postAuthEmailVerify(email, otp).authorization_code();
+      var request =
+          new AuthTokenWithAuthorizationCodeRequest(GrantType.AUTHORIZATION_CODE, authCode);
       var response = authService.createTokens(request);
       accessToken = response.accessToken();
     }
@@ -127,6 +129,7 @@ class AccountControllerTest {
 
     // 2. 비밀번호 변경 요청 when
     String newPassword = Util.passwordGenerator().get();
+
     {
       var request = new AccountRequestsDto.PatchAccountPasswordRequest(newPassword);
       mockMvc
@@ -135,8 +138,7 @@ class AccountControllerTest {
                   .header("Authorization", "Bearer " + accessToken)
                   .contentType("application/json")
                   .content(objectMapper.writeValueAsString(request)))
-          .andExpect(status().isOk())
-          .andDo(print());
+          .andExpect(status().isOk());
     }
 
     // 3. 변경된 비밀번호로 로그인 시도 then

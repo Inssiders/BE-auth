@@ -35,11 +35,9 @@ class AccountController {
   }
 
   @PostMapping
-  // @SecurityRequirement(name = "AccessToken")
   ResponseEntity<ResponseWrapper<PostAccountResponse>> register(
-      // single_access token은 JWT.sub를 직접 활용해야 함
       @AuthenticationPrincipal Jwt jwt, @RequestBody PostAccountRequest reqBody) {
-    var email = jwt.getClaimAsString("email");
+    String email = jwt.getClaim("email");
     if (!email.equals(reqBody.email())) {
       throw new IllegalArgumentException("Email in request body must match authenticated email");
     }

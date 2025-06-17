@@ -156,7 +156,7 @@ public class TestScenarioHelper {
     Instant now = Instant.now();
     JwtClaimsSet claims =
         JwtClaimsSet.builder()
-            .issuer("api.inssider.com")
+            .issuer("https://inssider.oomia.click")
             .issuedAt(now)
             .audience(List.of("inssider-app"))
             .subject(String.valueOf(accountId))
@@ -171,10 +171,10 @@ public class TestScenarioHelper {
     Instant now = Instant.now();
     JwtClaimsSet claims =
         JwtClaimsSet.builder()
-            .issuer("api.inssider.com")
+            .claim("email", email)
+            .issuer("https://inssider.oomia.click")
             .issuedAt(now)
             .audience(List.of("inssider-app"))
-            .claim("email", email)
             .expiresAt(now.plus(600, ChronoUnit.SECONDS))
             .claim("type", "single_access")
             .id(UUID.randomUUID().toString())

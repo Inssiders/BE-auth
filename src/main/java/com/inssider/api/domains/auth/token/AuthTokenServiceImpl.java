@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -26,7 +25,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 class AuthTokenServiceImpl implements AuthTokenService {
 
-  private static final String ISSUER = "api.inssider.com";
+  private static final String ISSUER = "https://inssider.oomia.click";
   private static final String AUDIENCE = "inssider-app";
   private static final String TOKEN_TYPE_ACCESS = "access";
   private static final String TOKEN_TYPE_REFRESH = "refresh";
@@ -98,7 +97,13 @@ class AuthTokenServiceImpl implements AuthTokenService {
     // 비밀번호 찾기를 위해 인증 코드가 사용되었다면 계정 정보를 찾을 수 있지만
     // 초기에 회원가입을 진행을 위해 사용되었다면 이메일만 존재하는 임시 계정이 반환됩니다.
     Account account = authenticator.redeemAuthorizationCode(authorizationCode);
-    return generateTokenResponse(AUTHORIZATION_CODE, account);
+
+    try {
+      return generateTokenResponse(AUTHORIZATION_CODE, account);
+    } catch (Exception e) {
+      String accessToken = generateSingleAccessToken(account.getEmail(), accessTokenExpiration);
+      return new AuthTokenResponse(accessToken, null, TOKEN_TYPE_BEARER, accessTokenExpiration);
+    }
   }
 
   /**
@@ -136,14 +141,11 @@ class AuthTokenServiceImpl implements AuthTokenService {
    * @return Grant Type에 맞는 토큰 응답
    */
   AuthTokenResponse generateTokenResponse(GrantType grantType, Account account) {
+    assert account != null && account.getId() > 0 : "Account ID must be positive";
     return switch (grantType) {
       case AUTHORIZATION_CODE -> {
-        String accessToken;
-        try {
-          accessToken = generateToken(account, accessTokenExpiration, TOKEN_TYPE_SINGLE_ACCESS);
-        } catch (Exception e) {
-          accessToken = generateSingleAccessToken(account.getEmail(), accessTokenExpiration);
-        }
+        String accessToken =
+            generateToken(account, accessTokenExpiration, TOKEN_TYPE_SINGLE_ACCESS);
         yield new AuthTokenResponse(accessToken, null, TOKEN_TYPE_BEARER, accessTokenExpiration);
       }
       case PASSWORD, REFRESH_TOKEN -> {
@@ -197,10 +199,9 @@ class AuthTokenServiceImpl implements AuthTokenService {
    * @param tokenType 토큰 타입 ("access", "refresh", "single_access")
    * @return 생성된 JWT 토큰 문자열
    */
-  String generateToken(@NonNull Account account, long expiration, String tokenType) {
+  String generateToken(Account account, long expiration, String tokenType) {
     Instant now = Instant.now();
-    Long accountId = account.getId();
-    assert accountId != null : "Account ID must not be null";
+    long accountId = account.getId();
 
     JwtClaimsSet claims =
         JwtClaimsSet.builder()

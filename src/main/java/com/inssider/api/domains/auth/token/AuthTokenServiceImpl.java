@@ -73,7 +73,7 @@ class AuthTokenServiceImpl implements AuthTokenService {
    */
   @Override
   public AuthTokenResponse permitTokensByRefreshToken(String refreshToken) {
-    Account account = authenticator.getAccountFromToken(refreshToken);
+    var account = authenticator.getAccountFromToken(refreshToken);
 
     // 저장된 토큰과 일치하는지 검증
     var storedRefreshToken = account.getRefreshToken().getToken();
@@ -97,7 +97,6 @@ class AuthTokenServiceImpl implements AuthTokenService {
     // 비밀번호 찾기를 위해 인증 코드가 사용되었다면 계정 정보를 찾을 수 있지만
     // 초기에 회원가입을 진행을 위해 사용되었다면 이메일만 존재하는 임시 계정이 반환됩니다.
     Account account = authenticator.redeemAuthorizationCode(authorizationCode);
-
     return generateTokenResponse(AUTHORIZATION_CODE, account);
   }
 
@@ -136,21 +135,9 @@ class AuthTokenServiceImpl implements AuthTokenService {
     assert account != null : "Account must not be null";
     return switch (grantType) {
       case AUTHORIZATION_CODE -> {
-        // 이미 가입된 계정인지 확인 (ID가 있는지로 판단)
-        if (account.getId() != null && account.getId() > 0) {
-          // 가입된 계정: 정상적인 access 토큰 발급
-          String accessToken =
-              generateToken(account, accessTokenExpiration, TOKEN_TYPE_SINGLE_ACCESS);
-          // String refreshToken = generateToken(account, refreshTokenExpiration,
-          // TOKEN_TYPE_REFRESH);
-          // createOrUpdateRefreshToken(account, refreshToken);
-          yield new AuthTokenResponse(accessToken, null, TOKEN_TYPE_BEARER, accessTokenExpiration);
-        } else {
-          // 미가입 계정: single_access 토큰 발급 (회원가입용)
-          String accessToken =
-              generateToken(account, accessTokenExpiration, TOKEN_TYPE_SINGLE_ACCESS);
-          yield new AuthTokenResponse(accessToken, null, TOKEN_TYPE_BEARER, accessTokenExpiration);
-        }
+        String accessToken =
+            generateToken(account, accessTokenExpiration, TOKEN_TYPE_SINGLE_ACCESS);
+        yield new AuthTokenResponse(accessToken, null, TOKEN_TYPE_BEARER, accessTokenExpiration);
       }
       case PASSWORD, REFRESH_TOKEN -> {
         assert account.getId() > 0 : "Account ID must be positive for PASSWORD/REFRESH_TOKEN";
@@ -184,7 +171,6 @@ class AuthTokenServiceImpl implements AuthTokenService {
                   return existing;
                 })
             .orElse(new RefreshToken(account, refreshToken));
-
     refreshTokenRepository.save(entity);
   }
 
@@ -218,10 +204,11 @@ class AuthTokenServiceImpl implements AuthTokenService {
 
     try {
       claimsBuilder.subject(String.valueOf(account.getId()));
-    } catch (Exception e) {
-      if (TOKEN_TYPE_SINGLE_ACCESS.equals(tokenType)) {
-        claimsBuilder.claim("email", account.getEmail());
-      }
+    } catch (Exception _e) {
+    }
+
+    if (TOKEN_TYPE_SINGLE_ACCESS.equals(tokenType)) {
+      claimsBuilder.claim("email", account.getEmail());
     }
 
     JwtClaimsSet claims = claimsBuilder.build();

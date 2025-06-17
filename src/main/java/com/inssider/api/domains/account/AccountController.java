@@ -6,7 +6,6 @@ import com.inssider.api.domains.account.AccountRequestsDto.PatchAccountPasswordR
 import com.inssider.api.domains.account.AccountRequestsDto.PostAccountRequest;
 import com.inssider.api.domains.account.AccountResponsesDto.PatchAccountMePasswordResponse;
 import com.inssider.api.domains.account.AccountResponsesDto.PostAccountResponse;
-import com.inssider.api.domains.auth.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,7 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 class AccountController {
 
   private final AccountService service;
-  private final AuthService authService;
 
   @GetMapping("/check")
   ResponseEntity<ResponseWrapper<Void>> checkEmailAvailability(@RequestParam String email) {

@@ -67,7 +67,7 @@ class OAuth2ResourceServerSecurityConfig {
   private String[] publicGetPaths() {
     return new String[] {
       "/api/accounts",
-      "/api/accounts/{email}",
+      "/api/accounts/check",
       "/api/profiles",
       "/api/profiles/index",
       "/api/profiles/{id:[0-9]+}",

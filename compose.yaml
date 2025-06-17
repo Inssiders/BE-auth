@@ -1,17 +1,9 @@
-# == ENVIRONMENT VARIABLES ==
-# POSTGRES_DB=dev
-# POSTGRES_PORT=5432
-# POSTGRES_USER=user
-# POSTGRES_PASSWORD=user
-# APP_PORT=8080
-
 # == POSTGRES TEMPLATE ==
 x-postgres-template: &postgres-template
   image: postgres:latest
   ports: ["${POSTGRES_PORT}:${POSTGRES_PORT}"]
   healthcheck:
-    test:
-      ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+    test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
     interval: 3s
     timeout: 3s
     retries: 3
@@ -23,6 +15,7 @@ x-app-template: &app-template
     interval: 3s
     timeout: 3s
     retries: 5
+    test: ["CMD", "wget", "--spider", "-q", "http://localhost:${APP_PORT}/actuator/health"]
   depends_on:
     postgres:
       condition: service_healthy
@@ -30,7 +23,7 @@ x-app-template: &app-template
 # == DOCKER COMPOSE ==
 services:
   # == NO PROFILE ==
-  # 환경변수는 .env.example 값이 우선적으로 사용됩니다.
+  # .env.example 값이 .env 값을 덮어쓰도록 설정합니다.
   postgres:
     <<: *postgres-template
     env_file: [".env", ".env.example"]
@@ -47,15 +40,6 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: stage
       POSTGRES_HOST: postgres
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--spider",
-          "-q",
-          "http://localhost:${APP_PORT}/actuator/health",
-        ]
 
   # == PROFILE: PROD ==
   # PROD는 실제 운영 환경과 동일한 환경입니다.
@@ -69,12 +53,3 @@ services:
     env_file: [".env"]
     environment:
       SPRING_PROFILES_ACTIVE: prod
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--spider",
-          "-q",
-          "http://localhost:${APP_PORT}/actuator/health",
-        ]

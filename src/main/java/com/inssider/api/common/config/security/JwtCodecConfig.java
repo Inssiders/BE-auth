@@ -27,8 +27,8 @@ class JwtCodecConfig {
   @Bean
   public JwtDecoder jwtDecoder() {
     NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withPublicKey(getRSAPublicKey()).build();
-    jwtDecoder.setJwtValidator(
-        JwtValidators.createDefault()); // [ ] implement DelegatingOAuth2TokenValidator
+    // [ ] implement DelegatingOAuth2TokenValidator
+    jwtDecoder.setJwtValidator(JwtValidators.createDefault());
     return jwtDecoder;
   }
 

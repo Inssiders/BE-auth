@@ -58,8 +58,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("com.querydsl:querydsl-jpa:5.0.0:jakarta")
 
-    implementation("com.querydsl:querydsl-jpa:5.0.0:jakarta")
-
     compileOnly("org.projectlombok:lombok")
 
     annotationProcessor("org.projectlombok:lombok")
@@ -72,6 +70,7 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly("com.h2database:h2")
 }
 
 val querydslDir = "${layout.buildDirectory.get().asFile}/generated/querydsl"
@@ -91,9 +90,9 @@ tasks {
         useJUnitPlatform()
         systemProperty("spring.profiles.active", activeProfile)
         testLogging {
-            events("passed", "skipped", "failed", "standardOut", "standardError")
+            // events("passed", "skipped", "failed", "standardOut", "standardError")
             showStandardStreams = true
-            exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+            // exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         }
     }
     withType<org.springframework.boot.gradle.tasks.run.BootRun> {

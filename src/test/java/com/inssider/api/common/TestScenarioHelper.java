@@ -15,16 +15,11 @@ import com.inssider.api.domains.auth.AuthRequestsDto.AuthTokenWithRefreshTokenRe
 import com.inssider.api.domains.auth.AuthResponsesDto.AuthEmailVerifyResponse;
 import com.inssider.api.domains.auth.AuthResponsesDto.AuthTokenResponse;
 import com.inssider.api.domains.auth.code.EmailAuthenticationCodeTestRepository;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestComponent;
 import org.springframework.http.MediaType;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.test.web.servlet.MockMvc;
 
 @TestComponent
@@ -152,33 +147,9 @@ public class TestScenarioHelper {
     return objectMapper.treeToValue(data, PostAccountResponse.class);
   }
 
-  public String getAccessToken(Long accountId) {
-    Instant now = Instant.now();
-    JwtClaimsSet claims =
-        JwtClaimsSet.builder()
-            .issuer("https://inssider.oomia.click")
-            .issuedAt(now)
-            .audience(List.of("inssider-app"))
-            .subject(String.valueOf(accountId))
-            .expiresAt(now.plus(600, ChronoUnit.SECONDS))
-            .claim("type", "access")
-            .id(UUID.randomUUID().toString())
-            .build();
-    return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-  }
-
-  public String getSingleAccessToken(String email) {
-    Instant now = Instant.now();
-    JwtClaimsSet claims =
-        JwtClaimsSet.builder()
-            .claim("email", email)
-            .issuer("https://inssider.oomia.click")
-            .issuedAt(now)
-            .audience(List.of("inssider-app"))
-            .expiresAt(now.plus(600, ChronoUnit.SECONDS))
-            .claim("type", "single_access")
-            .id(UUID.randomUUID().toString())
-            .build();
-    return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+  public String getSingleAccessToken(String email) throws Exception {
+    var otp = postAuthEmailChallenge(email);
+    var authCode = postAuthEmailVerify(email, otp).authorization_code();
+    return postAuthTokenWithAuthorizationCode(authCode).accessToken();
   }
 }

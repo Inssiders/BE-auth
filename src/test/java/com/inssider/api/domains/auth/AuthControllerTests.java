@@ -7,17 +7,17 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.inssider.api.common.TestScenarioHelper;
 import com.inssider.api.common.Util;
+import com.inssider.api.common.annotation.ControllerTest;
 import com.inssider.api.domains.account.Account;
 import com.inssider.api.domains.account.AccountDataTypes.RegisterType;
 import com.inssider.api.domains.account.AccountService;
 import com.inssider.api.domains.account.AccountTestRepository;
 import com.inssider.api.domains.auth.AuthDataTypes.GrantType;
-import com.inssider.api.domains.auth.AuthRequestsDto.AuthEmailChallengeRequest;
 import com.inssider.api.domains.auth.AuthRequestsDto.AuthEmailVerifyRequest;
 import com.inssider.api.domains.auth.AuthRequestsDto.AuthTokenWithPasswordRequest;
 import com.inssider.api.domains.auth.AuthRequestsDto.AuthTokenWithRefreshTokenRequest;
@@ -27,14 +27,12 @@ import com.inssider.api.domains.auth.code.EmailAuthenticationCodeTestRepository;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@ControllerTest
+@Transactional
 class AuthControllerTests {
 
   @Autowired private AuthController controller;
@@ -46,29 +44,25 @@ class AuthControllerTests {
   // common
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
+  @Autowired private TestScenarioHelper helper;
 
   // account
   @Autowired private AccountService accountService;
-  @Autowired AccountTestRepository accountRepository;
+  @Autowired private AccountTestRepository accountRepository;
 
   @Test
-  @Transactional
   void 이메일_인증() {
-    // 0. 계정 생성 (테스트용)
+    // 1. 계정 생성 (테스트용)
     var account = Util.accountGenerator().get();
     var email = account.getEmail();
     register(account);
     assertEquals(1, accountService.count());
 
-    // 1. 이메일 인증 요청
-    {
-      var request = new AuthEmailChallengeRequest(email);
-      controller.challengeEmailAuth(request);
-    }
+    // 2. 이메일 인증 요청 및 코드 획득
+    // Note: 실제 이메일 전송 없이 내부 저장소에 인증 코드 저장하고,
+    //       저장된 인증 코드를 획득하여 테스트 진행
+    String emailCode = helper.postAuthEmailChallenge(email);
     assertEquals(1, emailAuthenticationCodeRepository.count());
-
-    // 2. 이메일 인증 코드 획득
-    String emailCode = emailAuthenticationCodeRepository.findAll().getFirst().getCode();
 
     // 3. 이메일 인증 확인 및 authorization code 획득
     UUID authorizationCode;
@@ -93,14 +87,14 @@ class AuthControllerTests {
   }
 
   @Test
-  @Transactional
-  void 로그인() {
+  void 로그인() throws Exception {
     // 0. 계정 생성 (테스트용)
     var account = Util.accountGenerator().get();
     var email = account.getEmail();
     var plainPassword = account.getPassword();
-    register(account);
-    assertFalse(plainPassword.matches("\\{.+\\}$"));
+
+    var accessToken = helper.getSingleAccessToken(email);
+    helper.postAccount(email, plainPassword, accessToken);
     assertEquals(1, accountService.count());
 
     // 1. 로그인 요청
@@ -119,14 +113,13 @@ class AuthControllerTests {
   }
 
   @Test
-  @Transactional
   void 로그아웃() throws Exception {
     // 0. 계정 생성 (테스트용)
     var account = Util.accountGenerator().get();
     var email = account.getEmail();
     var plainPassword = account.getPassword();
-    register(account);
-    assertFalse(plainPassword.matches("\\{.+\\}$"));
+
+    helper.postAccount(email, plainPassword, helper.getSingleAccessToken(email));
     assertEquals(1, accountService.count());
 
     // 1. 로그인 요청
@@ -157,7 +150,6 @@ class AuthControllerTests {
   }
 
   @Test
-  @Transactional
   void 토큰_재발급() throws Exception {
     // 0. 계정 생성 (테스트용)
     var account = Util.accountGenerator().get();
@@ -184,8 +176,6 @@ class AuthControllerTests {
       var request =
           new AuthTokenWithRefreshTokenRequest(
               GrantType.REFRESH_TOKEN, refreshToken, "inssider-app");
-
-      // var response = controller.createToken(request).getBody().data();
       var rawResponse =
           mockMvc
               .perform(
@@ -193,16 +183,13 @@ class AuthControllerTests {
                       .contentType(MediaType.APPLICATION_JSON)
                       .content(objectMapper.writeValueAsString(request)))
               .andExpect(status().isOk())
-              .andDo(print())
               .andReturn()
               .getResponse()
               .getContentAsString();
       AuthTokenResponse response = objectMapper.readValue(rawResponse, AuthTokenResponse.class);
-      var newAccessToken = response.accessToken();
-      var newRefreshToken = response.refreshToken();
 
-      assertNotEquals(accessToken, newAccessToken);
-      assertNotEquals(refreshToken, newRefreshToken);
+      assertNotEquals(accessToken, response.accessToken());
+      assertNotEquals(refreshToken, response.refreshToken());
     }
   }
 

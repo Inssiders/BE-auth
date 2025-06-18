@@ -10,8 +10,10 @@ import com.inssider.api.domains.account.AccountRequestsDto.PostAccountRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
+@ActiveProfiles("test")
 class RegisterTypeJsonTest {
 
   @Autowired private ObjectMapper objectMapper;

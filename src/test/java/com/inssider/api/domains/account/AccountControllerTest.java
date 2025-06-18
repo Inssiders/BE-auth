@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inssider.api.common.TestScenarioHelper;
 import com.inssider.api.common.Util;
+import com.inssider.api.common.annotation.ControllerTest;
 import com.inssider.api.domains.account.AccountDataTypes.RegisterType;
 import com.inssider.api.domains.auth.AuthDataTypes.GrantType;
 import com.inssider.api.domains.auth.AuthRequestsDto.AuthTokenWithAuthorizationCodeRequest;
@@ -20,15 +21,11 @@ import com.inssider.api.domains.profile.UserProfileService;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import(TestScenarioHelper.class)
+@ControllerTest
+@Transactional
 class AccountControllerTest {
   @Autowired private TestScenarioHelper helper;
   @Autowired private AccountService accountService;
@@ -41,7 +38,6 @@ class AccountControllerTest {
   @Autowired private ObjectMapper objectMapper;
 
   @Test
-  @Transactional
   void 회원가입() throws Exception {
     // given
     Account account = Util.accountGenerator().get();
@@ -56,13 +52,6 @@ class AccountControllerTest {
   }
 
   @Test
-  @Transactional
-  void 중복_회원가입_실패() throws Exception {
-    // 이메일 중복 확인으로 대체
-  }
-
-  @Test
-  @Transactional
   void 회원탈퇴() throws Exception {
     // given
     Account account = Util.accountGenerator().get();
@@ -104,7 +93,6 @@ class AccountControllerTest {
   }
 
   @Test
-  @Transactional
   void 비밀번호_변경() throws Exception {
     // 0. 회원가입 요청 given
     String email;

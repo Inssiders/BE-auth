@@ -1,3 +1,5 @@
+server.port: ${APP_PORT}
+
 spring:
   jpa:
     properties:

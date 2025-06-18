@@ -1,9 +1,6 @@
 # https://docs.spring.io/spring-boot/appendix/application-properties
-server.port: ${APP_PORT}
 
 spring:
-  application:
-    name: inssider-main
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}

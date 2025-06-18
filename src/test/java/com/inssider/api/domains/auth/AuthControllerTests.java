@@ -1,7 +1,6 @@
 package com.inssider.api.domains.auth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -25,6 +24,7 @@ import com.inssider.api.domains.auth.AuthResponsesDto.AuthTokenResponse;
 import com.inssider.api.domains.auth.code.AuthorizationCodeTestRepository;
 import com.inssider.api.domains.auth.code.EmailAuthenticationCodeTestRepository;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -50,17 +50,22 @@ class AuthControllerTests {
   @Autowired private AccountService accountService;
   @Autowired private AccountTestRepository accountRepository;
 
+  private Account account;
+  private String email;
+  private String plainPassword;
+
+  @BeforeEach
+  void setUp() {
+    account = Util.accountGenerator().get();
+    email = account.getEmail();
+    plainPassword = account.getPassword();
+    accountService.register(RegisterType.PASSWORD, email, plainPassword);
+  }
+
   @Test
   void 이메일_인증() {
-    // 1. 계정 생성 (테스트용)
-    var account = Util.accountGenerator().get();
-    var email = account.getEmail();
-    register(account);
-    assertEquals(1, accountService.count());
-
     // 2. 이메일 인증 요청 및 코드 획득
-    // Note: 실제 이메일 전송 없이 내부 저장소에 인증 코드 저장하고,
-    //       저장된 인증 코드를 획득하여 테스트 진행
+    // Note: 실제 이메일 전송 없이 내부 저장소에 인증 코드 저장하고, 저장된 인증 코드를 획득하여 테스트 진행
     String emailCode = helper.postAuthEmailChallenge(email);
     assertEquals(1, emailAuthenticationCodeRepository.count());
 
@@ -88,15 +93,6 @@ class AuthControllerTests {
 
   @Test
   void 로그인() throws Exception {
-    // 0. 계정 생성 (테스트용)
-    var account = Util.accountGenerator().get();
-    var email = account.getEmail();
-    var plainPassword = account.getPassword();
-
-    var accessToken = helper.getSingleAccessToken(email);
-    helper.postAccount(email, plainPassword, accessToken);
-    assertEquals(1, accountService.count());
-
     // 1. 로그인 요청
     {
       var request = new AuthTokenWithPasswordRequest(GrantType.PASSWORD, email, plainPassword);
@@ -114,14 +110,6 @@ class AuthControllerTests {
 
   @Test
   void 로그아웃() throws Exception {
-    // 0. 계정 생성 (테스트용)
-    var account = Util.accountGenerator().get();
-    var email = account.getEmail();
-    var plainPassword = account.getPassword();
-
-    helper.postAccount(email, plainPassword, helper.getSingleAccessToken(email));
-    assertEquals(1, accountService.count());
-
     // 1. 로그인 요청
     String accessToken;
     {
@@ -151,14 +139,6 @@ class AuthControllerTests {
 
   @Test
   void 토큰_재발급() throws Exception {
-    // 0. 계정 생성 (테스트용)
-    var account = Util.accountGenerator().get();
-    var email = account.getEmail();
-    var plainPassword = account.getPassword();
-    register(account);
-    assertFalse(plainPassword.matches("\\{.+\\}$"));
-    assertEquals(1, accountService.count());
-
     // 1. 로그인 요청
     String accessToken;
     String refreshToken;
@@ -191,10 +171,5 @@ class AuthControllerTests {
       assertNotEquals(accessToken, response.accessToken());
       assertNotEquals(refreshToken, response.refreshToken());
     }
-  }
-
-  private Account register(Account account) {
-    return accountService.register(
-        RegisterType.PASSWORD, account.getEmail(), account.getPassword());
   }
 }

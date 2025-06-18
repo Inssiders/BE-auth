@@ -19,7 +19,6 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestComponent;
 import org.springframework.http.MediaType;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
 @TestComponent
@@ -27,7 +26,6 @@ public class TestScenarioHelper {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
-  @Autowired private JwtEncoder jwtEncoder;
 
   @Autowired private EmailAuthenticationCodeTestRepository emailCodeRepository;
 

@@ -14,7 +14,7 @@ class AuthSwaggerExamples {
         {
         "grant_type": "PASSWORD",
         "email": "user@example.com",
-        "password": "myp@22word"
+        "password": "myp@22worD"
         }
         """;
     // Refresh Token Login

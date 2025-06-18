@@ -1,4 +1,4 @@
-package com.inssider.api.common;
+package com.inssider.api.common.model;
 
 import org.springframework.http.HttpStatus;
 

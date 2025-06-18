@@ -1,7 +1,7 @@
 package com.inssider.api.domains.account;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.inssider.api.common.model.SoftDeleteable;
+import com.inssider.api.common.entity.SoftDeleteable;
 import com.inssider.api.domains.account.AccountDataTypes.AccountType;
 import com.inssider.api.domains.account.AccountDataTypes.RoleType;
 import com.inssider.api.domains.auth.token.RefreshToken;

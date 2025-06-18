@@ -1,4 +1,4 @@
-package com.inssider.api.common.model;
+package com.inssider.api.common.entity;
 
 import jakarta.persistence.MappedSuperclass;
 import java.time.LocalDateTime;

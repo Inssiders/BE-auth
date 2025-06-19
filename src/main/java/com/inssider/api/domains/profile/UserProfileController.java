@@ -1,10 +1,6 @@
 package com.inssider.api.domains.profile;
 
-import com.inssider.api.common.exception.CustomRuntimeException;
-import com.inssider.api.common.exception.DomainException;
-import com.inssider.api.common.exception.ExceptionReason;
-import com.inssider.api.common.exception.ExceptionReason.DomainType;
-import com.inssider.api.common.exception.ExceptionReason.ExceptionType;
+import com.inssider.api.common.model.ServiceResult;
 import com.inssider.api.common.response.BaseResponse;
 import com.inssider.api.common.response.BaseResponse.ResponseWrapper;
 import com.inssider.api.common.response.StandardResponse.GetIndexResponse;
@@ -15,7 +11,6 @@ import com.inssider.api.domains.profile.UserProfileRequestsDto.PatchProfileMeReq
 import com.inssider.api.domains.profile.UserProfileResponsesDto.GetPrivateProfileResponse;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.GetProfileMeResponse;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.GetProfileResponse;
-import com.inssider.api.domains.profile.UserProfileResponsesDto.GetPublicProfileResponse;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.PatchProfileMeResponse;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
@@ -42,21 +37,14 @@ class UserProfileController {
   // === Public API ===
 
   @GetMapping("/index")
-  ResponseEntity<ResponseWrapper<GetIndexResponse>> accountIndexes() {
-    try {
-      var accountIds = service.getAllUserProfileIds();
-      var data = new GetIndexResponse(accountIds);
-      return BaseResponse.of(200, data);
-    } catch (Exception e) {
-      //
-      throw CustomRuntimeException.of(
-          ExceptionReason.builder()
-              .domainType(DomainType.PROFILE)
-              .exceptionType(ExceptionType.SERVICE_UNAVAILABLE)
-              .message("Temporarily unable to retrieve user profile indexes")
-              .build(),
-          e);
-    }
+  ResponseEntity<ResponseWrapper<GetIndexResponse>> accountIndexes() throws Throwable {
+    var result = service.getAllUserProfileIds();
+    return switch (result) {
+      case ServiceResult.Success<GetIndexResponse, ?> success ->
+          BaseResponse.of(200, success.value());
+      case ServiceResult.Failure<GetIndexResponse, ? extends Throwable> failure ->
+          throw failure.exception();
+    };
   }
 
   @GetMapping
@@ -69,31 +57,17 @@ class UserProfileController {
               direction = Sort.Direction.ASC)
           Pageable pageable,
       @RequestParam(required = false) String nickname) {
-    return service.findUserProfilesByNickname(nickname, pageable);
+    return service.findUserProfilesByNickname(nickname, pageable).orElseThrow();
   }
 
   @GetMapping("/{id:\\d+}")
-  ResponseEntity<ResponseWrapper<GetProfileResponse>> getProfile(@PathVariable("id") Long id)
-      throws DomainException {
-    GetProfileResponse profileData;
+  ResponseEntity<ResponseWrapper<GetProfileResponse>> getProfile(@PathVariable("id") Long id) {
 
-    try {
-      profileData = service.findUserProfileById(id, ProfileContext.PUBLIC);
-    } catch (Exception e) {
-      throw new DomainException(
-          ExceptionReason.builder()
-              .domainType(DomainType.PROFILE)
-              .exceptionType(ExceptionType.RETRIEVE_FAILED)
-              .clazz(GetProfileResponse.class)
-              .message("Failed to retrieve user profile by ID: " + id)
-              .build(),
-          e);
-    }
+    var result = service.findUserProfileById(id, ProfileContext.PUBLIC).orElseThrow();
 
-    return switch (profileData) {
-      case GetPublicProfileResponse pub -> BaseResponse.of(200, pub);
+    return switch (result) {
       case GetPrivateProfileResponse priv -> BaseResponse.of(200, priv);
-      default -> BaseResponse.of(404, null);
+      default -> BaseResponse.of(200, result);
     };
   }
 
@@ -101,77 +75,20 @@ class UserProfileController {
 
   @GetMapping("/me")
   ResponseEntity<ResponseWrapper<GetProfileMeResponse>> getProfile(
-      @AuthenticationPrincipal Account account) throws DomainException {
+      @AuthenticationPrincipal Account account) {
 
-    long accountId;
-    try {
-      accountId = account.getId();
-    } catch (Exception e) {
-      throw new DomainException(
-          ExceptionReason.builder()
-              .domainType(DomainType.PROFILE)
-              .exceptionType(ExceptionType.CREDENTIAL_NOT_FOUND)
-              .clazz(Account.class)
-              .instance(account)
-              .message("Failed to retrieve account ID from authentication principal")
-              .build(),
-          e);
-    }
+    long accountId = account.getId();
+    var result = service.findUserProfileById(accountId, ProfileContext.SELF).orElseThrow();
 
-    GetProfileResponse data;
-    try {
-      data = service.findUserProfileById(accountId, ProfileContext.SELF);
-    } catch (Exception e) {
-      throw new DomainException(
-          ExceptionReason.builder()
-              .domainType(DomainType.PROFILE)
-              .exceptionType(ExceptionType.RETRIEVE_FAILED)
-              .clazz(GetProfileResponse.class)
-              .message("Failed to retrieve user profile")
-              .build(),
-          e);
-    }
-
-    return switch (data) {
-      case GetProfileMeResponse owner -> BaseResponse.of(200, owner);
-      default ->
-          throw new DomainException(
-              ExceptionReason.builder()
-                  .domainType(DomainType.PROFILE)
-                  .exceptionType(ExceptionType.UNAUTHORIZED)
-                  .clazz(GetProfileResponse.class)
-                  .instance(data)
-                  .message("Unauthorized access to owned-profile data")
-                  .build());
-    };
+    return BaseResponse.of(200, (GetProfileMeResponse) result);
   }
 
   @PatchMapping("/me")
   ResponseEntity<ResponseWrapper<PatchProfileMeResponse>> updateProfile(
       @AuthenticationPrincipal Account account, @RequestBody PatchProfileMeRequest profile) {
 
-    PatchProfileMeResponse data;
-    try {
-      data =
-          service.updateUserProfile(
-              account.getId(),
-              profile.nickname(),
-              profile.profileUrl(),
-              profile.bio(),
-              profile.accountVisible(),
-              profile.followerVisible());
+    var result = service.updateUserProfile(account.getId(), profile).orElseThrow();
 
-    } catch (Exception e) {
-      throw CustomRuntimeException.of(
-          ExceptionReason.builder()
-              .domainType(ExceptionReason.DomainType.PROFILE)
-              .exceptionType(ExceptionReason.ExceptionType.ENTITY_UPDATE_FAILED)
-              .clazz(PatchProfileMeRequest.class)
-              .instance(profile)
-              .message("Failed to update user profile")
-              .build(),
-          e);
-    }
-    return BaseResponse.of(200, data);
+    return BaseResponse.of(200, result);
   }
 }

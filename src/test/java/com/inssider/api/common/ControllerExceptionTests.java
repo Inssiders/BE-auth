@@ -62,9 +62,9 @@ class ControllerExceptionTests {
     ProblemDetail response = objectMapper.readValue(rawResponse, ProblemDetail.class);
 
     assertEquals(
-        "https://inssider.oomia.click/error/retrieve-failed", response.getType().toString());
-    assertEquals("RETRIEVE FAILED", response.getTitle());
-    assertEquals(400, response.getStatus());
+        "https://inssider.oomia.click/error/entity-not-found", response.getType().toString());
+    assertEquals("ENTITY NOT FOUND", response.getTitle());
+    assertEquals(404, response.getStatus());
     assertEquals("/api/profiles/0", response.getInstance().toString());
   }
 }

@@ -1,5 +1,9 @@
 package com.inssider.api.domains.profile;
 
+import com.inssider.api.common.exception.DomainException;
+import com.inssider.api.common.exception.ExceptionReason;
+import com.inssider.api.common.exception.ExceptionReason.DomainType;
+import com.inssider.api.common.exception.ExceptionReason.ExceptionType;
 import com.inssider.api.common.response.BaseResponse;
 import com.inssider.api.common.response.BaseResponse.ResponseWrapper;
 import com.inssider.api.common.response.StandardResponse.GetIndexResponse;
@@ -34,6 +38,15 @@ class UserProfileController {
 
   private final UserProfileService service;
 
+  // === Public API ===
+
+  @GetMapping("/index")
+  ResponseEntity<ResponseWrapper<GetIndexResponse>> accountIndex() {
+    var accountIds = service.getAllUserProfileIds();
+    var data = new GetIndexResponse(accountIds);
+    return BaseResponse.of(200, data);
+  }
+
   @GetMapping
   public QueryResponse<GetProfileResponse> query(
       @ParameterObject
@@ -47,9 +60,24 @@ class UserProfileController {
     return service.findUserProfilesByNickname(nickname, pageable);
   }
 
-  @GetMapping("/{id}")
-  ResponseEntity<ResponseWrapper<GetProfileResponse>> getProfile(@PathVariable("id") Long id) {
-    var profileData = service.findUserProfileById(id, ProfileContext.PUBLIC);
+  @GetMapping("/{id:\\d+}")
+  ResponseEntity<ResponseWrapper<GetProfileResponse>> getProfile(@PathVariable("id") Long id)
+      throws DomainException {
+    GetProfileResponse profileData;
+
+    try {
+      profileData = service.findUserProfileById(id, ProfileContext.PUBLIC);
+    } catch (Exception e) {
+      throw new DomainException(
+          ExceptionReason.builder()
+              .domainType(DomainType.PROFILE)
+              .exceptionType(ExceptionType.RETRIEVE_FAILED)
+              .clazz(GetProfileResponse.class)
+              .message("Failed to retrieve user profile by ID: " + id)
+              .build(),
+          e);
+    }
+
     return switch (profileData) {
       case GetPublicProfileResponse pub -> BaseResponse.of(200, pub);
       case GetPrivateProfileResponse priv -> BaseResponse.of(200, priv);
@@ -57,14 +85,52 @@ class UserProfileController {
     };
   }
 
+  // === Protected API ===
+
   @GetMapping("/me")
   ResponseEntity<ResponseWrapper<GetProfileMeResponse>> getProfile(
-      @AuthenticationPrincipal Account account) {
-    long accountId = account.getId();
-    GetProfileResponse data = service.findUserProfileById(accountId, ProfileContext.SELF);
+      @AuthenticationPrincipal Account account) throws DomainException {
+
+    long accountId;
+    try {
+      accountId = account.getId();
+    } catch (Exception e) {
+      throw new DomainException(
+          ExceptionReason.builder()
+              .domainType(DomainType.PROFILE)
+              .exceptionType(ExceptionType.CREDENTIAL_NOT_FOUND)
+              .clazz(Account.class)
+              .instance(account)
+              .message("Failed to retrieve account ID from authentication principal")
+              .build(),
+          e);
+    }
+
+    GetProfileResponse data;
+    try {
+      data = service.findUserProfileById(accountId, ProfileContext.SELF);
+    } catch (Exception e) {
+      throw new DomainException(
+          ExceptionReason.builder()
+              .domainType(DomainType.PROFILE)
+              .exceptionType(ExceptionType.RETRIEVE_FAILED)
+              .clazz(GetProfileResponse.class)
+              .message("Failed to retrieve user profile")
+              .build(),
+          e);
+    }
+
     return switch (data) {
       case GetProfileMeResponse owner -> BaseResponse.of(200, owner);
-      default -> BaseResponse.of(403, null);
+      default ->
+          throw new DomainException(
+              ExceptionReason.builder()
+                  .domainType(DomainType.PROFILE)
+                  .exceptionType(ExceptionType.UNAUTHORIZED)
+                  .clazz(GetProfileResponse.class)
+                  .instance(data)
+                  .message("Unauthorized access to owned-profile data")
+                  .build());
     };
   }
 
@@ -79,13 +145,6 @@ class UserProfileController {
             profile.bio(),
             profile.accountVisible(),
             profile.followerVisible());
-    return BaseResponse.of(200, data);
-  }
-
-  @GetMapping("/index")
-  ResponseEntity<ResponseWrapper<GetIndexResponse>> accountIndex() {
-    var accountIds = service.getAllUserProfileIds();
-    var data = new GetIndexResponse(accountIds);
     return BaseResponse.of(200, data);
   }
 }

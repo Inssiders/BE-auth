@@ -23,7 +23,7 @@ public class Util {
       "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\w\\s])\\S{8,64}$";
 
   public static URI buildAbsoluteUri(String path) {
-    final String BASE_URL = "https://api.inssider.com";
+    final String BASE_URL = "https://inssider.oomia.click";
 
     if (path == null || path.isBlank()) {
       path = "/";

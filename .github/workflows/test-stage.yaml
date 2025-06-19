@@ -33,9 +33,10 @@ jobs:
         run: cp .env.example .env
 
       - name: Start Docker Compose tests (profile=stage)
-        id: gradle-test
+        id: compose-test
         run: |
           TEST_START=$(date +%s)
+          ./gradlew test -Dspring.profiles.active=test --tests MainWebApplicationTests 
           COMPOSE_BAKE=true docker compose --profile stage up --build --wait
           TEST_END=$(date +%s)
           TEST_DURATION=$((TEST_END - TEST_START))
@@ -59,6 +60,6 @@ jobs:
           WORKFLOW_START=${{ steps.workflow-start.outputs.start_time }}
           WORKFLOW_END=$(date +%s)
           WORKFLOW_DURATION=$((WORKFLOW_END - WORKFLOW_START))
-          TEST_DURATION=${{ steps.gradle-test.outputs.test_duration }}
+          TEST_DURATION=${{ steps.compose-test.outputs.test_duration }}
           RATIO=$(awk "BEGIN {printf \"%.2f\", $TEST_DURATION/$WORKFLOW_DURATION}")
           echo "${TEST_DURATION} / ${WORKFLOW_DURATION} seconds ($RATIO)"

@@ -1,6 +1,6 @@
 package com.inssider.api.common.repository;
 
-import com.inssider.api.common.model.SoftDeleteable;
+import com.inssider.api.common.entity.SoftDeleteable;
 import java.util.List;
 import java.util.Optional;
 import lombok.NonNull;
@@ -27,6 +27,14 @@ public interface SoftDeleteRepository<T extends SoftDeleteable, ID> extends JpaR
   @Query("SELECT COUNT(e) FROM #{#entityName} e WHERE e.isDeleted = false")
   long count();
 
+  /**
+   * 대량 삭제나 성능이 중요한 경우에 사용하는 메서드입니다.
+   *
+   * <ul>
+   *   <li>Hook 메서드(preSoftDelete, postSoftDelete)가 실행되지 않습니다.
+   *   <li>단일 엔티티 삭제 시에는 엔티티의 softDelete() 메서드 사용을 권장합니다.
+   * </ul>
+   */
   @Transactional
   @Modifying
   @Query(

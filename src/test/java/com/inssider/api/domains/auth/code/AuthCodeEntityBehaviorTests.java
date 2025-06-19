@@ -7,16 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.inssider.api.common.TestScenarioHelper;
 import com.inssider.api.common.Util;
+import com.inssider.api.common.annotation.ControllerTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import(TestScenarioHelper.class)
+@ControllerTest
+@Transactional
 class AuthCodeEntityBehaviorTests {
 
   @Autowired private AuthCodeService service;
@@ -27,9 +24,7 @@ class AuthCodeEntityBehaviorTests {
   @Autowired private TestScenarioHelper helper;
 
   @Test
-  @Transactional
   void 이메일_인증코드_생명주기() {
-
     // 0. random email
     String email = Util.emailGenerator().get();
 
@@ -53,7 +48,6 @@ class AuthCodeEntityBehaviorTests {
   }
 
   @Test
-  @Transactional
   void 인가_코드_자동_속성() {
     var entity = authorizationCodeRepository.save(new AuthorizationCode());
     assertNotNull(entity.getId());

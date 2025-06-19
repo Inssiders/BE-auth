@@ -1,5 +1,9 @@
 package com.inssider.api.domains.account;
 
+import com.inssider.api.common.exception.CustomRuntimeException;
+import com.inssider.api.common.exception.ExceptionReason;
+import com.inssider.api.common.exception.ExceptionReason.DomainType;
+import com.inssider.api.common.exception.ExceptionReason.ExceptionType;
 import com.inssider.api.domains.auth.code.AuthCodeService;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -21,14 +25,27 @@ public class AccountAuthenticator {
   // auth-code-related
   private final AuthCodeService authCodeService;
 
-  public Account authenticate(String email, String password)
-      throws NoSuchElementException, IllegalArgumentException {
+  public Account authenticate(String email, String password) {
     Account account = repository.findByEmail(email).orElseThrow();
     if (account.isDeleted()) {
-      throw new NoSuchElementException();
+      throw CustomRuntimeException.of(
+          ExceptionReason.builder()
+              .domainType(DomainType.ACCOUNT)
+              .exceptionType(ExceptionType.CREDENTIAL_NOT_FOUND)
+              .clazz(String.class)
+              .instance(email)
+              .message("Account has been deleted")
+              .build());
     }
     if (!passwordEncoder.matches(password, account.getPassword())) {
-      throw new IllegalArgumentException("Invalid email or password");
+      throw CustomRuntimeException.of(
+          ExceptionReason.builder()
+              .domainType(DomainType.ACCOUNT)
+              .exceptionType(ExceptionType.FORBIDDEN)
+              .clazz(String.class)
+              .instance(email)
+              .message("Invalid email or password")
+              .build());
     }
     return account;
   }

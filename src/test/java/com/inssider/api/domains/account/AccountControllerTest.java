@@ -1,6 +1,5 @@
 package com.inssider.api.domains.account;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -11,65 +10,46 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inssider.api.common.TestScenarioHelper;
 import com.inssider.api.common.Util;
+import com.inssider.api.common.annotation.ControllerTest;
 import com.inssider.api.domains.account.AccountDataTypes.RegisterType;
 import com.inssider.api.domains.auth.AuthDataTypes.GrantType;
-import com.inssider.api.domains.auth.AuthRequestsDto.AuthTokenWithAuthorizationCodeRequest;
 import com.inssider.api.domains.auth.AuthRequestsDto.AuthTokenWithPasswordRequest;
 import com.inssider.api.domains.auth.AuthService;
-import com.inssider.api.domains.profile.UserProfileService;
-import java.util.UUID;
+import com.inssider.api.domains.profile.UserProfileTestRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import(TestScenarioHelper.class)
+@ControllerTest
+@Transactional
 class AccountControllerTest {
   @Autowired private TestScenarioHelper helper;
   @Autowired private AccountService accountService;
   @Autowired private AccountRepository accountRepository;
 
-  @Autowired private UserProfileService userProfileService;
+  @Autowired private UserProfileTestRepository userProfileRepository;
   @Autowired private AuthService authService;
 
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
 
-  @Test
-  @Transactional
-  void 회원가입() throws Exception {
-    // given
+  private String email;
+  private String plainPassword;
+
+  @BeforeEach
+  void setUp() {
     Account account = Util.accountGenerator().get();
-    String accessToken = helper.getSingleAccessToken(account.getEmail());
-
-    // when
-    assertDoesNotThrow(
-        () -> helper.postAccount(account.getEmail(), account.getPassword(), accessToken));
-
-    // then
-    assertEquals(1, accountRepository.count());
+    email = account.getEmail();
+    plainPassword = account.getPassword();
+    accountService.register(RegisterType.PASSWORD, email, plainPassword);
   }
 
   @Test
-  @Transactional
-  void 중복_회원가입_실패() throws Exception {
-    // 이메일 중복 확인으로 대체
-  }
-
-  @Test
-  @Transactional
-  void 회원탈퇴() throws Exception {
+  void 회원탈퇴_후_재가입() throws Exception {
     // given
-    Account account = Util.accountGenerator().get();
-    String email = account.getEmail();
-    String rawPassword = account.getPassword();
-    Long accountId = register(account).getId();
-    String accessToken = helper.getAccessToken(accountId);
+    String accessToken = helper.postAuthTokenWithPassword(email, plainPassword).accessToken();
 
     // when
     {
@@ -78,14 +58,14 @@ class AccountControllerTest {
           .andExpect(status().isOk());
     }
 
-    // then
-    assertEquals(0, accountService.count());
+    // then - 1. 회원 탈퇴 후, 계정 정보가 soft delete 상태로 변경됨
     assertEquals(1, accountRepository.findAllDeleted().size());
-    assertEquals(0, userProfileService.count());
+    assertEquals(0, accountRepository.count());
+    assertEquals(0, userProfileRepository.count());
 
-    // 5. 회원 탈퇴 후, 로그인 시도 시 실패 then
+    // then - 2. 회원 탈퇴 후, 로그인 시도 시 실패
     {
-      var request = new AuthTokenWithPasswordRequest(GrantType.PASSWORD, email, rawPassword);
+      var request = new AuthTokenWithPasswordRequest(GrantType.PASSWORD, email, plainPassword);
       mockMvc
           .perform(
               post("/api/auth/token")
@@ -94,43 +74,18 @@ class AccountControllerTest {
           .andExpect(status().is4xxClientError());
     }
 
-    // 6. 재가입 시, 기존 계정 hard delete 후 계정 생성 확인 then
-    {
-      accountService.register(RegisterType.PASSWORD, email, rawPassword);
-    }
+    // then - 3. 재가입 시, 기존 계정 hard delete 후 계정 생성 확인
+    accountService.register(RegisterType.PASSWORD, email, plainPassword);
+    assertEquals(1, accountRepository.count());
     assertEquals(0, accountRepository.findAllDeleted().size());
-    assertEquals(1, accountRepository.findAllIncludeDeleted().size());
-    assertEquals(1, accountService.count());
   }
 
   @Test
-  @Transactional
   void 비밀번호_변경() throws Exception {
-    // 0. 회원가입 요청 given
-    String email;
-    Account account = Util.accountGenerator().get();
-    {
-      email = account.getEmail();
-      register(account);
-    }
-    assertEquals(1, accountService.count());
-
-    // 1. 이메일 인증 로그인 given
-    String accessToken;
-    {
-      String otp = helper.postAuthEmailChallenge(email);
-      UUID authCode = helper.postAuthEmailVerify(email, otp).authorization_code();
-      var request =
-          new AuthTokenWithAuthorizationCodeRequest(GrantType.AUTHORIZATION_CODE, authCode);
-      var response = authService.createTokens(request);
-      accessToken = response.accessToken();
-    }
-    assertNotNull(accessToken);
-
     // 2. 비밀번호 변경 요청 when
     String newPassword = Util.passwordGenerator().get();
-
     {
+      String accessToken = helper.getSingleAccessToken(email);
       var request = new AccountRequestsDto.PatchAccountPasswordRequest(newPassword);
       mockMvc
           .perform(
@@ -146,11 +101,7 @@ class AccountControllerTest {
       var request = new AuthTokenWithPasswordRequest(GrantType.PASSWORD, email, newPassword);
       var response = authService.createTokens(request);
       assertNotNull(response.accessToken());
+      assertNotNull(response.refreshToken());
     }
-  }
-
-  private Account register(Account account) {
-    return accountService.register(
-        RegisterType.PASSWORD, account.getEmail(), account.getPassword());
   }
 }

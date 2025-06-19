@@ -1,5 +1,6 @@
 package com.inssider.api.domains.profile;
 
+import com.inssider.api.common.model.ServiceResult;
 import com.inssider.api.common.response.BaseResponse;
 import com.inssider.api.common.response.BaseResponse.ResponseWrapper;
 import com.inssider.api.common.response.StandardResponse.GetIndexResponse;
@@ -10,7 +11,6 @@ import com.inssider.api.domains.profile.UserProfileRequestsDto.PatchProfileMeReq
 import com.inssider.api.domains.profile.UserProfileResponsesDto.GetPrivateProfileResponse;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.GetProfileMeResponse;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.GetProfileResponse;
-import com.inssider.api.domains.profile.UserProfileResponsesDto.GetPublicProfileResponse;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.PatchProfileMeResponse;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
@@ -34,6 +34,19 @@ class UserProfileController {
 
   private final UserProfileService service;
 
+  // === Public API ===
+
+  @GetMapping("/index")
+  ResponseEntity<ResponseWrapper<GetIndexResponse>> accountIndexes() throws Throwable {
+    var result = service.getAllUserProfileIds();
+    return switch (result) {
+      case ServiceResult.Success<GetIndexResponse, ?> success ->
+          BaseResponse.of(200, success.value());
+      case ServiceResult.Failure<GetIndexResponse, ? extends Throwable> failure ->
+          throw failure.exception();
+    };
+  }
+
   @GetMapping
   public QueryResponse<GetProfileResponse> query(
       @ParameterObject
@@ -44,48 +57,38 @@ class UserProfileController {
               direction = Sort.Direction.ASC)
           Pageable pageable,
       @RequestParam(required = false) String nickname) {
-    return service.findUserProfilesByNickname(nickname, pageable);
+    return service.findUserProfilesByNickname(nickname, pageable).orElseThrow();
   }
 
-  @GetMapping("/{id}")
+  @GetMapping("/{id:\\d+}")
   ResponseEntity<ResponseWrapper<GetProfileResponse>> getProfile(@PathVariable("id") Long id) {
-    var profileData = service.findUserProfileById(id, ProfileContext.PUBLIC);
-    return switch (profileData) {
-      case GetPublicProfileResponse pub -> BaseResponse.of(200, pub);
+
+    var result = service.findUserProfileById(id, ProfileContext.PUBLIC).orElseThrow();
+
+    return switch (result) {
       case GetPrivateProfileResponse priv -> BaseResponse.of(200, priv);
-      default -> BaseResponse.of(404, null);
+      default -> BaseResponse.of(200, result);
     };
   }
+
+  // === Protected API ===
 
   @GetMapping("/me")
   ResponseEntity<ResponseWrapper<GetProfileMeResponse>> getProfile(
       @AuthenticationPrincipal Account account) {
+
     long accountId = account.getId();
-    GetProfileResponse data = service.findUserProfileById(accountId, ProfileContext.SELF);
-    return switch (data) {
-      case GetProfileMeResponse owner -> BaseResponse.of(200, owner);
-      default -> BaseResponse.of(403, null);
-    };
+    var result = service.findUserProfileById(accountId, ProfileContext.SELF).orElseThrow();
+
+    return BaseResponse.of(200, (GetProfileMeResponse) result);
   }
 
   @PatchMapping("/me")
   ResponseEntity<ResponseWrapper<PatchProfileMeResponse>> updateProfile(
       @AuthenticationPrincipal Account account, @RequestBody PatchProfileMeRequest profile) {
-    var data =
-        service.updateUserProfile(
-            account.getId(),
-            profile.nickname(),
-            profile.profileUrl(),
-            profile.bio(),
-            profile.accountVisible(),
-            profile.followerVisible());
-    return BaseResponse.of(200, data);
-  }
 
-  @GetMapping("/index")
-  ResponseEntity<ResponseWrapper<GetIndexResponse>> accountIndex() {
-    var accountIds = service.getAllUserProfileIds();
-    var data = new GetIndexResponse(accountIds);
-    return BaseResponse.of(200, data);
+    var result = service.updateUserProfile(account.getId(), profile).orElseThrow();
+
+    return BaseResponse.of(200, result);
   }
 }

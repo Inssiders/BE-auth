@@ -1,6 +1,6 @@
 package com.inssider.api.common.response;
 
-import com.inssider.api.common.ResponseMessage;
+import com.inssider.api.common.model.ResponseMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 

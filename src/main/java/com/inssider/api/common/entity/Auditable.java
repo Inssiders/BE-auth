@@ -1,4 +1,4 @@
-package com.inssider.api.common.model;
+package com.inssider.api.common.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;

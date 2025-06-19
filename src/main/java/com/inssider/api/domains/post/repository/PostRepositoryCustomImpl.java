@@ -79,7 +79,13 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom {
 
     List<PostDTO> posts =
         queryFactory
-            .select(post.id, post.account.id, post.title, profile.nickname, profile.profileUrl)
+            .select(
+                post.id,
+                post.account.id,
+                post.title,
+                post.mediaUrl,
+                profile.nickname,
+                profile.profileUrl)
             .from(post)
             .leftJoin(profile)
             .on(profile.account.id.eq(post.account.id))
@@ -94,6 +100,7 @@ public class PostRepositoryCustomImpl implements PostRepositoryCustom {
                         .id(entity.get(post.id))
                         .accountId(entity.get(post.account.id))
                         .title(entity.get(post.title))
+                        .mediaUrl(entity.get(post.mediaUrl))
                         .nickname(entity.get(profile.nickname))
                         .profileUrl(entity.get(profile.profileUrl))
                         .likeCount(0L)

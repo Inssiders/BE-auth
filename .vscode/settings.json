@@ -7,7 +7,7 @@
   "spring-boot.ls.problem.boot2.WEB_ANNOTATION_NAMES": "IGNORE",
   "java.settings.url": "./.vscode/.prefs",
   "java.test.config": {
-    "vmArgs": ["-Dspring.profiles.active=dev"]
+    "vmArgs": ["-Dspring.profiles.active=test"]
   },
   "java.format.enabled": false,
   "explorer.excludeGitIgnore": false,

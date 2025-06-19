@@ -1,6 +1,6 @@
 package com.inssider.api.domains.profile;
 
-import com.inssider.api.common.model.SoftDeleteable;
+import com.inssider.api.common.entity.SoftDeleteable;
 import com.inssider.api.domains.account.Account;
 import com.inssider.api.domains.profile.UserProfileDataTypes.ProfileContext;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.GetPrivateProfileResponse;

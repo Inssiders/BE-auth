@@ -42,7 +42,7 @@ class UserProfileServiceImpl implements UserProfileService {
       Optional<Boolean> accountVisible,
       Optional<Boolean> followerVisible) {
 
-    UserProfile entity = repository.findById(id).orElseThrow();
+    var entity = repository.findById(id).orElseThrow();
 
     nickname.ifPresent(entity::setNickname);
     profileUrl.ifPresent(entity::setProfileUrl);

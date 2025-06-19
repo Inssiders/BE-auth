@@ -2,7 +2,6 @@ package com.inssider.api.common;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -55,7 +54,6 @@ class ControllerExceptionTests {
     var rawResponse =
         mockMvc
             .perform(get("/api/profiles/0").accept(MediaType.APPLICATION_JSON))
-            .andDo(print())
             .andExpect(status().is4xxClientError())
             .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
             .andReturn()

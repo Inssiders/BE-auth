@@ -76,6 +76,8 @@ public class ExceptionReason {
     ENTITY_NOT_FOUND(404),
     FORBIDDEN(403),
     BAD_CREDENTIALS(400),
+    ENTITY_UPDATE_FAILED(500),
+    SERVICE_UNAVAILABLE(503),
     UNDEFINED(500);
 
     private final int httpStatusCode;

@@ -1,5 +1,6 @@
 package com.inssider.api.domains.profile;
 
+import com.inssider.api.common.exception.CustomRuntimeException;
 import com.inssider.api.common.exception.DomainException;
 import com.inssider.api.common.exception.ExceptionReason;
 import com.inssider.api.common.exception.ExceptionReason.DomainType;
@@ -41,10 +42,21 @@ class UserProfileController {
   // === Public API ===
 
   @GetMapping("/index")
-  ResponseEntity<ResponseWrapper<GetIndexResponse>> accountIndex() {
-    var accountIds = service.getAllUserProfileIds();
-    var data = new GetIndexResponse(accountIds);
-    return BaseResponse.of(200, data);
+  ResponseEntity<ResponseWrapper<GetIndexResponse>> accountIndexes() {
+    try {
+      var accountIds = service.getAllUserProfileIds();
+      var data = new GetIndexResponse(accountIds);
+      return BaseResponse.of(200, data);
+    } catch (Exception e) {
+      //
+      throw CustomRuntimeException.of(
+          ExceptionReason.builder()
+              .domainType(DomainType.PROFILE)
+              .exceptionType(ExceptionType.SERVICE_UNAVAILABLE)
+              .message("Temporarily unable to retrieve user profile indexes")
+              .build(),
+          e);
+    }
   }
 
   @GetMapping
@@ -137,14 +149,29 @@ class UserProfileController {
   @PatchMapping("/me")
   ResponseEntity<ResponseWrapper<PatchProfileMeResponse>> updateProfile(
       @AuthenticationPrincipal Account account, @RequestBody PatchProfileMeRequest profile) {
-    var data =
-        service.updateUserProfile(
-            account.getId(),
-            profile.nickname(),
-            profile.profileUrl(),
-            profile.bio(),
-            profile.accountVisible(),
-            profile.followerVisible());
+
+    PatchProfileMeResponse data;
+    try {
+      data =
+          service.updateUserProfile(
+              account.getId(),
+              profile.nickname(),
+              profile.profileUrl(),
+              profile.bio(),
+              profile.accountVisible(),
+              profile.followerVisible());
+
+    } catch (Exception e) {
+      throw CustomRuntimeException.of(
+          ExceptionReason.builder()
+              .domainType(ExceptionReason.DomainType.PROFILE)
+              .exceptionType(ExceptionReason.ExceptionType.ENTITY_UPDATE_FAILED)
+              .clazz(PatchProfileMeRequest.class)
+              .instance(profile)
+              .message("Failed to update user profile")
+              .build(),
+          e);
+    }
     return BaseResponse.of(200, data);
   }
 }

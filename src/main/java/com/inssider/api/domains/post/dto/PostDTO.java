@@ -10,9 +10,14 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PostDTO {
+
+  // Post information
   private Long id;
   private Long accountId;
   private String title;
+  private String mediaUrl;
+
+  // User profile information
   private String nickname;
   private String profileUrl;
   @Builder.Default private Long likeCount = 0L;

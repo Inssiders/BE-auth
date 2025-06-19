@@ -66,7 +66,7 @@ public class ExceptionReason {
     POST,
     PROFILE,
     TAG,
-    SECURITY
+    COMMON
   }
 
   public enum ExceptionType {

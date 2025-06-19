@@ -8,9 +8,8 @@ on:
         required: false
         default: "latest"
   workflow_run:
-    workflows: ["Publish Docker image on Semver tag push"]
-    types:
-      - completed
+    workflows: [Publish Docker image on Semver tag push]
+    types: [completed]
 
 permissions:
   id-token: write

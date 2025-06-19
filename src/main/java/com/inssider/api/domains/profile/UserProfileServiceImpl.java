@@ -23,11 +23,6 @@ class UserProfileServiceImpl implements UserProfileService {
   }
 
   @Override
-  public long count() {
-    return repository.count();
-  }
-
-  @Override
   public GetProfileResponse findUserProfileById(Long id, ProfileContext context) {
     UserProfile entity = repository.findById(id).orElseThrow();
     return entity.convertToDto(context);

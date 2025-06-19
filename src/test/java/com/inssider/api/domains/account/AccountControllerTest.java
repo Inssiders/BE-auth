@@ -15,7 +15,7 @@ import com.inssider.api.domains.account.AccountDataTypes.RegisterType;
 import com.inssider.api.domains.auth.AuthDataTypes.GrantType;
 import com.inssider.api.domains.auth.AuthRequestsDto.AuthTokenWithPasswordRequest;
 import com.inssider.api.domains.auth.AuthService;
-import com.inssider.api.domains.profile.UserProfileService;
+import com.inssider.api.domains.profile.UserProfileTestRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +29,7 @@ class AccountControllerTest {
   @Autowired private AccountService accountService;
   @Autowired private AccountRepository accountRepository;
 
-  @Autowired private UserProfileService userProfileService;
+  @Autowired private UserProfileTestRepository userProfileRepository;
   @Autowired private AuthService authService;
 
   @Autowired private MockMvc mockMvc;
@@ -61,7 +61,7 @@ class AccountControllerTest {
     // then - 1. 회원 탈퇴 후, 계정 정보가 soft delete 상태로 변경됨
     assertEquals(1, accountRepository.findAllDeleted().size());
     assertEquals(0, accountRepository.count());
-    assertEquals(0, userProfileService.count());
+    assertEquals(0, userProfileRepository.count());
 
     // then - 2. 회원 탈퇴 후, 로그인 시도 시 실패
     {

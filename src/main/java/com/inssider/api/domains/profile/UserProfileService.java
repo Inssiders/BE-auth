@@ -12,8 +12,6 @@ public interface UserProfileService {
 
   List<Long> getAllUserProfileIds();
 
-  long count();
-
   GetProfileResponse findUserProfileById(Long id, ProfileContext context);
 
   PatchProfileMeResponse updateUserProfile(

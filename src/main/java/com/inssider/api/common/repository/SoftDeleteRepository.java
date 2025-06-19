@@ -1,6 +1,6 @@
 package com.inssider.api.common.repository;
 
-import com.inssider.api.common.model.SoftDeleteable;
+import com.inssider.api.common.entity.SoftDeleteable;
 import java.util.List;
 import java.util.Optional;
 import lombok.NonNull;

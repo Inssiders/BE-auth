@@ -1,28 +1,24 @@
 package com.inssider.api.domains.profile;
 
+import com.inssider.api.common.model.ServiceResult;
+import com.inssider.api.common.response.StandardResponse.GetIndexResponse;
 import com.inssider.api.common.response.StandardResponse.QueryResponse;
 import com.inssider.api.domains.profile.UserProfileDataTypes.ProfileContext;
+import com.inssider.api.domains.profile.UserProfileRequestsDto.PatchProfileMeRequest;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.GetProfileResponse;
 import com.inssider.api.domains.profile.UserProfileResponsesDto.PatchProfileMeResponse;
-import java.util.List;
-import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 
 public interface UserProfileService {
 
-  List<Long> getAllUserProfileIds();
+  ServiceResult<GetIndexResponse, ? extends Throwable> getAllUserProfileIds();
 
-  long count();
+  ServiceResult<QueryResponse<GetProfileResponse>, ? extends Throwable> findUserProfilesByNickname(
+      String nickname, Pageable pageable);
 
-  GetProfileResponse findUserProfileById(Long id, ProfileContext context);
+  ServiceResult<GetProfileResponse, ? extends Throwable> findUserProfileById(
+      Long id, ProfileContext context);
 
-  PatchProfileMeResponse updateUserProfile(
-      Long id,
-      Optional<String> nickname,
-      Optional<String> profileUrl,
-      Optional<String> bio,
-      Optional<Boolean> accountVisible,
-      Optional<Boolean> followerVisible);
-
-  QueryResponse<GetProfileResponse> findUserProfilesByNickname(String nickname, Pageable pageable);
+  ServiceResult<PatchProfileMeResponse, ? extends Throwable> updateUserProfile(
+      Long id, PatchProfileMeRequest request);
 }

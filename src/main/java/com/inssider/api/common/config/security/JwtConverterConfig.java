@@ -39,23 +39,19 @@ class JwtConverterConfig {
     public JwtAuthenticationToken convert(Jwt jwt) {
       Set<GrantedAuthority> authorities = getAuthoritiesFrom(jwt);
 
-      long accountId;
+      Account account;
       try {
-        accountId = Long.parseLong(jwt.getSubject());
-        assert accountId > 0 : "Account ID must be a positive number";
-      } catch (NumberFormatException e) {
+        validateTokenState(jwt);
+        long accountId = Long.parseLong(jwt.getSubject());
+        account = accountService.findById(accountId).orElseThrow();
+        validateAccountState(account);
+      } catch (Exception __) {
         if ("single_access".equals(jwt.getClaimAsString("type"))) {
           // type: single_access on pre-registration
           return new JwtAuthenticationToken(jwt, authorities);
         }
-        throw new BadCredentialsException("Invalid JWT subject: " + jwt.getSubject(), e);
+        return null;
       }
-
-      Account account =
-          accountService
-              .findById(accountId)
-              .orElseThrow(() -> new BadCredentialsException("Account not found: " + accountId));
-      validateTokenType(jwt, account);
 
       authorities.add(new SimpleGrantedAuthority(ROLE_PREFIX + account.getRole().name()));
 
@@ -91,25 +87,7 @@ class JwtConverterConfig {
       return authorities;
     }
 
-    private void validateTokenType(Jwt jwt, Account account) throws BadCredentialsException {
-      if (account.isDeleted()) {
-        throw new BadCredentialsException("Account is deleted");
-      }
-
-      String tokenType = jwt.getClaimAsString("type");
-      if ("access".equals(tokenType)) {
-        return; // 정상적인 access 토큰
-      }
-
-      // refresh_token가 아닌 경우, RefreshToken 체크
-      if (!"single_access".equals(tokenType) && account.getRefreshToken() == null) {
-        throw new BadCredentialsException("Invalid token state");
-      }
-
-      validateTokenExpiration(jwt);
-    }
-
-    private void validateTokenExpiration(Jwt jwt) throws BadCredentialsException {
+    private void validateTokenState(Jwt jwt) throws BadCredentialsException {
       Instant now = Instant.now();
 
       // 발급 시간 검증 (토큰이 미래에 발급되지 않았는지)
@@ -129,6 +107,24 @@ class JwtConverterConfig {
       if (notBefore != null && notBefore.isAfter(now)) {
         throw new BadCredentialsException("Token not yet valid: " + notBefore);
       }
+    }
+
+    private void validateAccountState(Account account) throws BadCredentialsException {
+      if (account.isDeleted()) {
+        throw new BadCredentialsException("Account is deleted");
+      }
+
+      // [ ] 여러 기기에서 로그인하는 경우를 고려하여 refresh_token이 없는 경우에도 예외를 발생시키지 않음
+
+      // String tokenType = jwt.getClaimAsString("type");
+      // if ("access".equals(tokenType)) {
+      //   return; // 정상적인 access 토큰
+      // }
+
+      // refresh_token가 아닌 경우, RefreshToken 체크
+      // if (!"single_access".equals(tokenType) && account.getRefreshToken() == null) {
+      //   throw new BadCredentialsException("Invalid token state");
+      // }
     }
   }
 }

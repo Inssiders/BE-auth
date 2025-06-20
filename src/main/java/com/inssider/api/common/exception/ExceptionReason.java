@@ -90,4 +90,8 @@ public class ExceptionReason {
       return httpStatusCode;
     }
   }
+
+  public interface IReasonExtension {
+    ExceptionReason getReason();
+  }
 }

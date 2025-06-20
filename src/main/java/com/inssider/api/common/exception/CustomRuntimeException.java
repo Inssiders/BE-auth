@@ -1,8 +1,10 @@
 package com.inssider.api.common.exception;
 
-public class CustomRuntimeException extends RuntimeException {
+import com.inssider.api.common.exception.ExceptionReason.IReasonExtension;
 
-  @lombok.Getter private final ExceptionReason reason;
+public class CustomRuntimeException extends RuntimeException implements IReasonExtension {
+
+  @lombok.Getter protected final ExceptionReason reason;
 
   CustomRuntimeException(DomainException domainException) {
     super(domainException.getMessage(), domainException);

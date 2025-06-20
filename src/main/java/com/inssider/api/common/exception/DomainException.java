@@ -1,6 +1,8 @@
 package com.inssider.api.common.exception;
 
-public class DomainException extends Exception {
+import com.inssider.api.common.exception.ExceptionReason.IReasonExtension;
+
+public class DomainException extends Exception implements IReasonExtension {
 
   @lombok.Getter protected final ExceptionReason reason;
 

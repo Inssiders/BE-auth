@@ -51,9 +51,9 @@ class SwaggerConfig {
         new OpenAPI()
             .info(
                 new Info()
-                    .title("Inssider Auth API")
+                    .title("Inssider API")
                     .version(version)
-                    .description("Inssider Auth API Documentation"))
+                    .description("Inssider API Documentation"))
             .components(components());
 
     if (Arrays.asList(environment.getActiveProfiles()).contains("prod")) {

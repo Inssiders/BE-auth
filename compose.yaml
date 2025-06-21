@@ -48,7 +48,7 @@ services:
   app:
     <<: *app-template
     profiles: [prod]
-    image: oomia/inssider-be-auth:${DOCKER_TAG:-latest}
+    image: oomia/inssider-be-main:${DOCKER_TAG:-latest}
     restart: "on-failure"
     env_file: [".env"]
     environment:

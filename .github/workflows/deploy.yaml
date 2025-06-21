@@ -64,7 +64,7 @@ jobs:
           username: oomia
           key: ${{ secrets.AWS_SSH_PK }}
           script: |
-            cd BE-auth
+            cd BE-main
             echo "Deploying Docker tag: ${{ steps.docker_tag.outputs.tag }}"
             SPRING_PROFILES_ACTIVE=prod DOCKER_TAG=${{ steps.docker_tag.outputs.tag }} docker compose --profile prod up -d --pull always
 

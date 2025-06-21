@@ -5,7 +5,7 @@
 name: Integration Test (profile:test)
 on:
   pull_request:
-    branches: [ develop ]
+    branches: [develop]
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -24,16 +24,6 @@ jobs:
           java-version-file: .java-version
           cache: "gradle"
 
-      # - uses: docker/setup-compose-action@v1.2.0
-      #   with:
-      #     version: latest
-
-      # - name: Set up .env (profile=dev)
-      #   run: cp .env.example .env
-
-      # - name: Start Docker Compose (profile=dev)
-      #   run: docker compose --profile dev up -d
-
       - name: Run Gradle tests (profile=test)
         id: gradle-test
         run: |
@@ -43,6 +33,17 @@ jobs:
           TEST_DURATION=$((TEST_END - TEST_START))
           echo "test_duration=${TEST_DURATION}" >> $GITHUB_OUTPUT
 
+      - run: ./gradlew spotlessCheck
+      - run: ./gradlew jacocoTestReport
+
+      - name: Upload test coverage to Codecov.io
+        uses: codecov/codecov-action@v5
+        with:
+          name: integration-test
+          flags: integration
+          fail_ci_if_error: true
+          verbose: true
+
       - name: Upload Test Report on Failure
         if: failure()
         uses: actions/upload-artifact@v4.6.2
@@ -51,9 +52,6 @@ jobs:
           path: build/reports/tests/test
           retention-days: 1
           overwrite: true
-
-      # - name: Docker clean-up (profile=dev)
-      #   run: docker compose --profile dev down
 
       - name: Show Test/Workflow Duration Ratio on Success
         if: success()

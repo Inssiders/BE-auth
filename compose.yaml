@@ -16,9 +16,6 @@ x-app-template: &app-template
     timeout: 3s
     retries: 5
     test: ["CMD", "wget", "--spider", "-q", "http://localhost:${APP_PORT}/actuator/health"]
-  depends_on:
-    postgres:
-      condition: service_healthy
 
 # == DOCKER COMPOSE ==
 services:
@@ -40,6 +37,9 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: stage
       POSTGRES_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # == PROFILE: PROD ==
   # PROD는 실제 운영 환경과 동일한 환경입니다.

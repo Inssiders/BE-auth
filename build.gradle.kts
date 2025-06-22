@@ -1,3 +1,5 @@
+import org.springframework.boot.gradle.tasks.run.BootRun
+
 plugins {
     java
     jacoco
@@ -74,7 +76,7 @@ dependencies {
     testRuntimeOnly("com.h2database:h2")
 }
 
-val querydslDir = "${layout.buildDirectory.get().asFile}/generated/querydsl"
+val querydslDir = "${layout.buildDirectory.get().asFile}/generated/sources/annotationProcessor/java/main"
 
 sourceSets {
     main {
@@ -96,7 +98,8 @@ tasks {
             // exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         }
     }
-    withType<org.springframework.boot.gradle.tasks.run.BootRun> {
+
+    withType<BootRun> {
         systemProperty("spring.profiles.active", activeProfile)
     }
 
@@ -107,6 +110,14 @@ tasks {
     clean {
         doLast {
             file(querydslDir).deleteRecursively()
+        }
+    }
+
+    withType<JacocoReport> {
+        executionData(fileTree(layout.buildDirectory.dir("jacoco")).include("**/*.exec"))
+        reports {
+            xml.required.set(true)
+            html.required.set(false)
         }
     }
 }

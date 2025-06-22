@@ -11,5 +11,6 @@
   },
   "java.format.enabled": false,
   "explorer.excludeGitIgnore": false,
+  "java.debug.settings.onBuildFailureProceed": true,
   "java.project.outputPath": "build"
 }

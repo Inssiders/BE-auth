@@ -107,12 +107,6 @@ tasks {
         options.generatedSourceOutputDirectory = file(genSources)
     }
 
-    clean {
-        doLast {
-            file(genSources).deleteRecursively()
-        }
-    }
-
     withType<JacocoReport> {
         executionData(fileTree(layout.buildDirectory.dir("jacoco")).include("**/*.exec"))
         reports {

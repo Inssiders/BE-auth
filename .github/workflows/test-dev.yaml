@@ -24,6 +24,8 @@ jobs:
           java-version-file: .java-version
           cache: "gradle"
 
+      - run: ./gradlew spotlessCheck
+
       - name: Run Gradle tests (profile=test)
         id: gradle-test
         run: |
@@ -33,7 +35,6 @@ jobs:
           TEST_DURATION=$((TEST_END - TEST_START))
           echo "test_duration=${TEST_DURATION}" >> $GITHUB_OUTPUT
 
-      - run: ./gradlew spotlessCheck
       - run: ./gradlew jacocoTestReport
 
       - name: Upload test coverage to Codecov.io

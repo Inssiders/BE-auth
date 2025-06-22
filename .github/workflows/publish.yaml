@@ -52,7 +52,8 @@ jobs:
 
       - name: Save Docker tag for deployment
         run: |
-          echo "${{ steps.meta.outputs.tags }}" | head -n1 > docker_tag.txt
+          TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1 | sed 's/.*://')
+          echo "$TAG" > docker_tag.txt
 
       - name: Upload Docker metadata
         uses: actions/upload-artifact@v4

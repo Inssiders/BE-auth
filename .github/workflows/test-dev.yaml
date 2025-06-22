@@ -39,6 +39,7 @@ jobs:
       - name: Upload test coverage to Codecov.io
         uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           name: integration-test
           flags: integration
           fail_ci_if_error: true

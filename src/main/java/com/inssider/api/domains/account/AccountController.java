@@ -28,7 +28,8 @@ class AccountController {
   private final AccountService service;
 
   @GetMapping("/check")
-  ResponseEntity<ResponseWrapper<Void>> checkEmailAvailability(@RequestParam String email) {
+  ResponseEntity<ResponseWrapper<Void>> checkEmailAvailability(
+      @RequestParam(defaultValue = "") String email) {
     boolean isAvailable = !email.isBlank() && service.existsByEmail(email);
     return isAvailable ? BaseResponse.of(200, null) : BaseResponse.of(404, null);
   }

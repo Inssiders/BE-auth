@@ -1,8 +1,18 @@
 package com.inssider.api.domains.comment.service;
 
+import com.inssider.api.common.exception.DomainException;
+import com.inssider.api.common.exception.ExceptionReason;
+import com.inssider.api.common.exception.ExceptionReason.DomainType;
+import com.inssider.api.common.exception.ExceptionReason.ExceptionReasonBuilder;
+import com.inssider.api.common.model.ServiceResult;
 import com.inssider.api.domains.account.Account;
 import com.inssider.api.domains.account.AccountService;
-import com.inssider.api.domains.comment.dto.*;
+import com.inssider.api.domains.comment.dto.CommentCreateRequestDTO;
+import com.inssider.api.domains.comment.dto.CommentCreateResponseDTO;
+import com.inssider.api.domains.comment.dto.CommentDeleteResponseDTO;
+import com.inssider.api.domains.comment.dto.CommentGetResponseDTO;
+import com.inssider.api.domains.comment.dto.CommentUpdateRequestDTO;
+import com.inssider.api.domains.comment.dto.CommentUpdateResponseDTO;
 import com.inssider.api.domains.comment.entity.Comment;
 import com.inssider.api.domains.comment.mapper.CommentMapper;
 import com.inssider.api.domains.comment.repository.CommentRepository;
@@ -24,10 +34,13 @@ public class CommentService {
   // 인증 적용 후 삭제 예정
   private final AccountService accountService;
 
+  private final ExceptionReasonBuilder builder =
+      ExceptionReason.builder().domainType(DomainType.COMMENT);
+
   public CommentCreateResponseDTO create(Long memeId, CommentCreateRequestDTO requestDTO) {
     // 인증 적용 후 삭제 예정
     Account account = accountService.findById(2L).get();
-    Post post = postService.get(memeId);
+    Post post = postService.get(memeId).orElseThrow();
 
     Comment parentComment = null;
     if (requestDTO.getParentCommentId() != null) {
@@ -63,12 +76,23 @@ public class CommentService {
     return CommentMapper.deleteDTO(updatedComment);
   }
 
-  public List<CommentGetResponseDTO> get(Long memeId) {
-    if (postService.isPost(memeId)) {
+  public ServiceResult<List<CommentGetResponseDTO>, ? extends Throwable> get(Long memeId) {
+    try {
+
       List<Comment> comments = commentRepository.findAllByPostIdWithAccount(memeId);
-      return CommentMapper.toGetResponseDTO(comments);
+      return ServiceResult.success(CommentMapper.toGetResponseDTO(comments));
+
+    } catch (Exception e) {
+      return ServiceResult.failure(
+          new DomainException(
+              builder
+                  .exceptionType(ExceptionReason.ExceptionType.ENTITY_NOT_FOUND)
+                  .clazz(Long.class)
+                  .instance(memeId)
+                  .message("존재하지 않는 콘텐츠입니다.")
+                  .build(),
+              e));
     }
-    throw new NoSuchElementException("존재하지 않는 콘텐츠입니다.");
   }
 
   public CommentUpdateResponseDTO update(Long commentId, CommentUpdateRequestDTO reqBody) {

@@ -42,7 +42,7 @@ public class CommentController {
   @GetMapping("/{memeId}")
   ResponseEntity<BaseResponse.ResponseWrapper<List<CommentGetResponseDTO>>> get(
       @PathVariable Long memeId) {
-    List<CommentGetResponseDTO> data = commentService.get(memeId);
+    List<CommentGetResponseDTO> data = commentService.get(memeId).orElseThrow();
     return BaseResponse.of(200, data);
   }
 }

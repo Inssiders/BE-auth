@@ -56,15 +56,15 @@ class OAuth2ResourceServerSecurityConfig {
   }
 
   /** 시스템 레벨 공개 경로 반환 */
-  private String[] getSystemPublicPaths() {
+  protected String[] getSystemPublicPaths() {
     return new String[] {"/", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/health"};
   }
 
-  private String[] publicPostPaths() {
+  protected String[] publicPostPaths() {
     return new String[] {"/api/auth/email/challenge", "/api/auth/email/verify", "/api/auth/token"};
   }
 
-  private String[] publicGetPaths() {
+  protected String[] publicGetPaths() {
     return new String[] {
       "/api/accounts",
       "/api/accounts/check",

@@ -76,12 +76,12 @@ dependencies {
     testRuntimeOnly("com.h2database:h2")
 }
 
-val querydslDir = "${layout.buildDirectory.get().asFile}/generated/sources/annotationProcessor/java/main"
+val genSources = "${layout.buildDirectory.get().asFile}/generated/sources/annotationProcessor/java/main"
 
 sourceSets {
     main {
         java {
-            srcDirs(querydslDir)
+            srcDirs(genSources)
         }
     }
 }
@@ -104,12 +104,12 @@ tasks {
     }
 
     withType<JavaCompile> {
-        options.generatedSourceOutputDirectory = file(querydslDir)
+        options.generatedSourceOutputDirectory = file(genSources)
     }
 
     clean {
         doLast {
-            file(querydslDir).deleteRecursively()
+            file(genSources).deleteRecursively()
         }
     }
 

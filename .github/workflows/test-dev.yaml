@@ -34,7 +34,7 @@ jobs:
           echo "test_duration=${TEST_DURATION}" >> $GITHUB_OUTPUT
 
       - run: ./gradlew spotlessCheck
-      # - run: ./gradlew jacocoTestReport
+      - run: ./gradlew jacocoTestReport
 
       - name: Upload test coverage to Codecov.io
         uses: codecov/codecov-action@v5

@@ -72,8 +72,8 @@ class OAuth2ResourceServerSecurityConfig {
       "/api/profiles/index",
       "/api/profiles/{id:[0-9]+}",
       "/api/posts",
+      "/api/posts/sitemap",
       "/api/posts/{id:[0-9]+}",
-      "/api/memes/sitemap",
       "/api/comments/{id:[0-9]+}",
       "/api/categories"
     };

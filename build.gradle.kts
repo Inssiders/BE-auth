@@ -115,6 +115,7 @@ spotless {
     setEnforceCheck(false)
     java {
         googleJavaFormat("1.27.0")
+        target("src/*/java/**/*.java")
     }
     kotlinGradle {
         target("*.gradle.kts")

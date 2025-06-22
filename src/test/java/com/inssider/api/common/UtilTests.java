@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @ActiveProfiles("test")
-class UtilTest {
+class UtilTests {
   private static final String ENCODED_PASSWORD_PATTERN = "^\\{[a-zA-Z0-9@_]+}\\$.*";
 
   @Autowired private PasswordEncoder passwordEncoder;

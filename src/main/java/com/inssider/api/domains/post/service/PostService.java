@@ -1,10 +1,24 @@
 package com.inssider.api.domains.post.service;
 
+import com.inssider.api.common.exception.DomainException;
+import com.inssider.api.common.exception.ExceptionReason;
+import com.inssider.api.common.exception.ExceptionReason.DomainType;
+import com.inssider.api.common.exception.ExceptionReason.ExceptionReasonBuilder;
+import com.inssider.api.common.exception.ExceptionReason.ExceptionType;
+import com.inssider.api.common.model.ServiceResult;
 import com.inssider.api.domains.account.Account;
 import com.inssider.api.domains.account.AccountService;
 import com.inssider.api.domains.category.entity.Category;
 import com.inssider.api.domains.category.service.CategoryService;
-import com.inssider.api.domains.post.dto.*;
+import com.inssider.api.domains.post.dto.PostCreateRequestDTO;
+import com.inssider.api.domains.post.dto.PostCursorRequestDTO;
+import com.inssider.api.domains.post.dto.PostCursorResponseDTO;
+import com.inssider.api.domains.post.dto.PostDeleteResponseDTO;
+import com.inssider.api.domains.post.dto.PostGetDetailResponseDTO;
+import com.inssider.api.domains.post.dto.PostGetIdResponseDTO;
+import com.inssider.api.domains.post.dto.PostResponseDTO;
+import com.inssider.api.domains.post.dto.PostUpdateRequestDTO;
+import com.inssider.api.domains.post.dto.PostUpdateResponseDTO;
 import com.inssider.api.domains.post.entity.Post;
 import com.inssider.api.domains.post.mapper.PostMapper;
 import com.inssider.api.domains.post.repository.PostRepository;
@@ -14,7 +28,6 @@ import jakarta.transaction.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +42,9 @@ public class PostService {
 
   // 인증 적용 후 삭제 예정
   private final AccountService accountService;
+
+  private final ExceptionReasonBuilder reasonBuilder =
+      ExceptionReason.builder().domainType(DomainType.POST);
 
   public PostResponseDTO create(PostCreateRequestDTO reqBody) {
     // 인증 적용 후 삭제 예정
@@ -100,12 +116,26 @@ public class PostService {
     return PostMapper.deleteDTO(updatedPost);
   }
 
-  public PostGetDetailResponseDTO getDetail(Long memeId) {
-    Post currentPost =
-        postRepository
-            .findByIdWithTag(memeId)
-            .orElseThrow(() -> new IllegalArgumentException("게시글 오류 발생"));
-    return PostMapper.toGetDetailDTO(currentPost);
+  public ServiceResult<PostGetDetailResponseDTO, ? extends Throwable> getDetail(Long memeId) {
+    try {
+
+      Post currentPost =
+          postRepository
+              .findByIdWithTag(memeId)
+              .orElseThrow(() -> new IllegalArgumentException("게시글 오류 발생"));
+      return ServiceResult.success(PostMapper.toGetDetailDTO(currentPost));
+
+    } catch (Exception e) {
+      return ServiceResult.failure(
+          new DomainException(
+              reasonBuilder
+                  .exceptionType(ExceptionType.ENTITY_NOT_FOUND)
+                  .clazz(Long.class)
+                  .instance(memeId)
+                  .message("User profile not found")
+                  .build(),
+              e));
+    }
   }
 
   public List<PostGetIdResponseDTO> getIds(LocalDate localDate) {
@@ -120,22 +150,51 @@ public class PostService {
     return postRepository.existsById(postId);
   }
 
-  public Post get(Long postId) {
-    return postRepository
-        .findById(postId)
-        .orElseThrow(() -> new NoSuchElementException("존재하지 않는 콘텐츠입니다."));
+  public ServiceResult<Post, ? extends Throwable> get(Long postId) {
+    try {
+
+      return ServiceResult.success(postRepository.findById(postId).orElseThrow());
+
+    } catch (Exception e) {
+      return ServiceResult.failure(
+          new DomainException(
+              reasonBuilder
+                  .exceptionType(ExceptionType.ENTITY_NOT_FOUND)
+                  .clazz(Long.class)
+                  .instance(postId)
+                  .message("User profile not found")
+                  .build(),
+              e));
+    }
   }
 
-  public PostCursorResponseDTO get(PostCursorRequestDTO request) {
-    // 인증 적용 후 삭제 예정
-    Account account = accountService.findById(1L).get();
+  public ServiceResult<PostCursorResponseDTO, ? extends Throwable> get(
+      PostCursorRequestDTO request) {
 
-    if ("post".equals(request.getProfile_filter())) {
-      return getPostsByAccount(request, account.getId());
-    } else if ("like".equals(request.getProfile_filter())) {
-      return getLikedPostsByAccount(request, account.getId());
-    } else {
-      return getAllPosts(request);
+    try {
+      Account account = accountService.findById(1L).get(); // [ ] 인증 적용 후 삭제
+
+      PostCursorResponseDTO res;
+
+      if ("post".equals(request.getProfile_filter())) {
+        res = getPostsByAccount(request, account.getId());
+      } else if ("like".equals(request.getProfile_filter())) {
+        res = getLikedPostsByAccount(request, account.getId());
+      } else {
+        res = getAllPosts(request);
+      }
+      return ServiceResult.success(res);
+
+    } catch (Exception e) {
+      return ServiceResult.failure(
+          new DomainException(
+              reasonBuilder
+                  .exceptionType(ExceptionType.ENTITY_NOT_FOUND)
+                  .clazz(PostCursorRequestDTO.class)
+                  .instance(request)
+                  .message("Posts cursor request not found")
+                  .build(),
+              e));
     }
   }
 

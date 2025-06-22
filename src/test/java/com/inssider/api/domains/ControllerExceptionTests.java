@@ -1,4 +1,4 @@
-package com.inssider.api.common;
+package com.inssider.api.domains;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;

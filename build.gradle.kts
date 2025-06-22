@@ -1,5 +1,8 @@
+import org.springframework.boot.gradle.tasks.run.BootRun
+
 plugins {
     java
+    jacoco
     id("org.springframework.boot") version "4.0.0-SNAPSHOT"
     id("io.spring.dependency-management") version "1.1.7"
     id("com.diffplug.spotless") version "7.0.4"
@@ -73,12 +76,12 @@ dependencies {
     testRuntimeOnly("com.h2database:h2")
 }
 
-val querydslDir = "${layout.buildDirectory.get().asFile}/generated/querydsl"
+val genSources = "${layout.buildDirectory.get().asFile}/generated/sources/annotationProcessor/java/main"
 
 sourceSets {
     main {
         java {
-            srcDirs(querydslDir)
+            srcDirs(genSources)
         }
     }
 }
@@ -95,17 +98,20 @@ tasks {
             // exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         }
     }
-    withType<org.springframework.boot.gradle.tasks.run.BootRun> {
+
+    withType<BootRun> {
         systemProperty("spring.profiles.active", activeProfile)
     }
 
     withType<JavaCompile> {
-        options.generatedSourceOutputDirectory = file(querydslDir)
+        options.generatedSourceOutputDirectory = file(genSources)
     }
 
-    clean {
-        doLast {
-            file(querydslDir).deleteRecursively()
+    withType<JacocoReport> {
+        executionData(fileTree(layout.buildDirectory.dir("jacoco")).include("**/*.exec"))
+        reports {
+            xml.required.set(true)
+            html.required.set(false)
         }
     }
 }
@@ -114,6 +120,7 @@ spotless {
     setEnforceCheck(false)
     java {
         googleJavaFormat("1.27.0")
+        target("src/*/java/**/*.java")
     }
     kotlinGradle {
         target("*.gradle.kts")

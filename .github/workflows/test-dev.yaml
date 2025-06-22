@@ -40,7 +40,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          name: integration-test
+          slug: Inssiders/BE-main
           flags: integration
           fail_ci_if_error: true
           verbose: true
